@@ -36,7 +36,7 @@
       <!-- 播放器容器 -->
       <div id="mobile-ezuikit-player" class="ezuikit-player" v-show="!error"></div>
 
-      <!-- 顶部返回和信息 -->
+      <!-- 顶部返回和信息（不遮挡 EZUIKit 原生控件） -->
       <div class="player-top-bar" v-if="initialized && !isSwitchingChannel">
         <button class="top-btn" @click="goBack">
           <svg viewBox="0 0 24 24" width="22" height="22">
@@ -50,38 +50,8 @@
         <div class="top-spacer"></div>
       </div>
 
-      <!-- 底部控制栏 -->
-      <div class="player-bottom-bar" v-if="initialized && !isSwitchingChannel" :class="{ visible: controlsVisible }">
-        <button class="control-btn" @click="prevChannel" :disabled="!hasPrev">
-          <svg viewBox="0 0 24 24" width="22" height="22">
-            <polygon points="19 20 9 12 19 4 19 20" fill="none" stroke="currentColor" stroke-width="2"/>
-            <line x1="5" y1="4" x2="5" y2="20" stroke="currentColor" stroke-width="2"/>
-          </svg>
-          <span class="control-label">上一个</span>
-        </button>
-        <button class="control-btn" @click="toggleFullscreen">
-          <svg v-if="!isFullscreen" viewBox="0 0 24 24" width="22" height="22">
-            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-          </svg>
-          <svg v-else viewBox="0 0 24 24" width="22" height="22">
-            <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-          </svg>
-          <span class="control-label">{{ isFullscreen ? '退出全屏' : '全屏' }}</span>
-        </button>
-        <button class="control-btn" @click="cycleScaleMode" :title="scaleModeLabel">
-          <svg viewBox="0 0 24 24" width="22" height="22">
-            <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-          </svg>
-          <span class="control-label">{{ scaleModeLabel }}</span>
-        </button>
-        <button class="control-btn" @click="nextChannel" :disabled="!hasNext">
-          <svg viewBox="0 0 24 24" width="22" height="22">
-            <polygon points="5 4 15 12 5 20 5 4" fill="none" stroke="currentColor" stroke-width="2"/>
-            <line x1="19" y1="4" x2="19" y2="20" stroke="currentColor" stroke-width="2"/>
-          </svg>
-          <span class="control-label">下一个</span>
-        </button>
-      </div>
+      <!-- EZUIKit 底部控件由 mobileLive 模板 + mobileExtendOptions 原生提供
+           包含：PTZ控制(二级弹层)、全屏、画质切换等 -->
     </div>
   </div>
 </template>
@@ -298,12 +268,10 @@ async function initPlayer() {
       videoLevel: localStorage.getItem('videoQuality') === 'sd' ? 'sd' : localStorage.getItem('videoQuality') === 'fluent' ? 'fluent' : 'hd',
       videoLevelList: ['hd', 'sd', 'fluent'],
       mobileExtendOptions: {
-        controls: [],
+        controls: ['ptzControl', 'fullScreen', 'hdSwitch'],
         showClose: false,
         showBack: false,
-        showPTZ: false,
-        showFocus: false,
-        showZoom: false,
+        showPTZ: true,
       },
       handleSuccess: () => {
         initialized.value = true

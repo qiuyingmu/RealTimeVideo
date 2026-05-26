@@ -74,38 +74,16 @@
       <span class="ni-label">{{ networkLabel }}</span>
     </div>
 
-    <!-- ====== 移动端覆盖层控件 ======
-         注意：overlay 有 pointer-events: none，只对按钮开启 pointer-events: auto，
-         确保 EZUIKit 内置的云台控制/缩放等控件可以正常触摸。 -->
-    <div v-if="initialized && isMobile && !isSwitchingChannel" class="mobile-controls-overlay">
-      <!-- 透明中间区域点击 → 切换控制栏显隐 -->
-      <div class="mco-touch-zone" @click="toggleControls"></div>
-
-      <!-- 切频道按钮（左侧） -->
+    <!-- ====== 移动端 - 仅保留频道切换按钮 ======
+         EZUIKit mobileLive 模板自带底部工具栏（PTZ/全屏/画质等），
+         我们只补充 EZUIKit 不提供的「上一个/下一个通道」导航按钮。 -->
+    <div v-if="initialized && isMobile && !isSwitchingChannel" class="mobile-nav-overlay">
       <button v-if="showMobileControls" class="mobile-nav-btn mobile-nav-left" @click.stop="emitPrevChannel" aria-label="上一个通道">
         <svg viewBox="0 0 24 24" width="22" height="22"><polyline points="15 18 9 12 15 6" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
-      <!-- 切频道按钮（右侧） -->
       <button v-if="showMobileControls" class="mobile-nav-btn mobile-nav-right" @click.stop="emitNextChannel" aria-label="下一个通道">
         <svg viewBox="0 0 24 24" width="22" height="22"><polyline points="9 6 15 12 9 18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
-      <!-- 底部操作栏 -->
-      <div v-if="showMobileControls" class="mobile-bottom-bar">
-        <button class="mobile-bottom-btn" @click.stop="toggleFullscreen" :aria-label="isFullscreen ? '退出全屏' : '全屏'">
-          <svg v-if="!isFullscreen" viewBox="0 0 24 24" width="20" height="20">
-            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-          </svg>
-          <svg v-else viewBox="0 0 24 24" width="20" height="20">
-            <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-          </svg>
-        </button>
-        <!-- 缩放模式切换 -->
-        <button class="mobile-bottom-btn" @click.stop="cycleScaleMode" aria-label="切换缩放模式" :title="scaleModeLabel">
-          <svg viewBox="0 0 24 24" width="20" height="20">
-            <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-          </svg>
-        </button>
-      </div>
     </div>
   </div>
 </template>
@@ -262,12 +240,10 @@ function createPlayer() {
     videoLevel: localStorage.getItem('videoQuality') || 'hd',
     videoLevelList: ['hd', 'sd', 'fluent'],
     mobileExtendOptions: {
-      controls: [],
+      controls: ['ptzControl', 'fullScreen', 'hdSwitch'],
       showClose: false,
       showBack: false,
-      showPTZ: false,
-      showFocus: false,
-      showZoom: false,
+      showPTZ: true,
     },
     handleSuccess: () => {
       clearLoadTimeout()
@@ -620,29 +596,11 @@ onUnmounted(() => {
 .network-indicator.poor .ni-dot { background: #ef4444; box-shadow: 0 0 6px rgba(239, 68, 68, 0.5); }
 .network-indicator.poor .ni-label { color: #fca5a5; }
 
-/* ====== 移动端覆盖控件 ======
-   关键：overlay 本身 pointer-events: none 让触摸穿透到 EZUIKit 内置云台控件，
-   只对按钮和触摸区域开启 pointer-events: auto，确保可点击。 */
-.mobile-controls-overlay {
+/* ====== 移动端频道导航按钮（EZUIKit 不提供此功能） ====== */
+.mobile-nav-overlay {
   position: absolute; inset: 0; z-index: 30;
+  pointer-events: none;              /* 触摸穿透 → EZUIKit 原生控件可操作 */
   touch-action: none;
-  pointer-events: none;              /* 触摸穿透 → EZUIKit 云台控件可点 */
-}
-
-/* 触摸区域（不可见，仅用于点击切换控制栏显隐） */
-.mco-touch-zone {
-  position: absolute; inset: 0; z-index: 1;
-  pointer-events: auto;              /* 自己可接收点击 */
-}
-
-/* 所有按钮恢复点击事件 */
-.mobile-nav-btn,
-.mobile-bottom-btn {
-  pointer-events: auto;              /* 按钮可点击 */
-}
-
-.mobile-bottom-bar {
-  pointer-events: none;              /* 容器本身穿透，但按钮有 auto 所以可点 */
 }
 
 .mobile-nav-btn {
@@ -655,6 +613,7 @@ onUnmounted(() => {
   border: none; border-radius: 8px;
   color: #fff; cursor: pointer;
   transition: all 0.2s;
+  pointer-events: auto;              /* 按钮可点击 */
   z-index: 31;
 }
 .mobile-nav-btn:active {
@@ -662,29 +621,6 @@ onUnmounted(() => {
 }
 .mobile-nav-left { left: 6px; }
 .mobile-nav-right { right: 6px; }
-
-.mobile-bottom-bar {
-  position: absolute; bottom: 0; left: 0; right: 0;
-  display: flex; align-items: center; justify-content: flex-end;
-  padding: 12px 16px 16px;
-  z-index: 31;
-}
-
-.mobile-bottom-btn {
-  width: 44px; height: 44px;
-  display: flex; align-items: center; justify-content: center;
-  background: rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 50%;
-  color: #fff; cursor: pointer;
-  transition: all 0.2s;
-}
-.mobile-bottom-btn:active {
-  background: rgba(255, 255, 255, 0.2);
-  transform: scale(0.95);
-}
 
 /* ====== 移动端适配 ====== */
 @media (max-width: 768px) {
