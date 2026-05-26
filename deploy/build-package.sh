@@ -42,7 +42,12 @@ cp "$PROJECT_DIR/deploy/init.sql" "$BUILD_DIR/deploy/"
 cp "$PROJECT_DIR/deploy/env.production" "$BUILD_DIR/deploy/"
 cp "$PROJECT_DIR/docker-compose.yml" "$BUILD_DIR/"
 cp -r "$PROJECT_DIR/frontend" "$BUILD_DIR/frontend"
+# 后端源码（Docker 多阶段构建需要源码来检测缓存失效）
+cp "$PROJECT_DIR/backend/pom.xml" "$BUILD_DIR/backend/"
+cp -r "$PROJECT_DIR/backend/src" "$BUILD_DIR/backend/src"
 cp "$PROJECT_DIR/backend/target/realtime-video-backend-1.0.0.jar" "$BUILD_DIR/backend/target/"
+# .dockerignore (如果存在)
+cp "$PROJECT_DIR/backend/.dockerignore" "$BUILD_DIR/backend/" 2>/dev/null || true
 echo "  ✅ 文件复制完成"
 
 # 4. 打包

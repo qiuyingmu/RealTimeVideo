@@ -13,6 +13,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
@@ -50,6 +51,7 @@ public class EzvizService {
     private final DeviceRepository deviceRepository;
     private final ChannelRepository channelRepository;
     private final RestTemplate restTemplate;
+    private final TransactionTemplate transactionTemplate;
 
     private final ReentrantLock tokenLock = new ReentrantLock();
 
@@ -263,8 +265,6 @@ public class EzvizService {
                 return;
             }
 
-            channelRepository.deleteByDeviceSerial(deviceSerial);
-
             String deviceName = deviceRepository.findByDeviceSerial(deviceSerial)
                     .map(Device::getDeviceName).orElse(deviceSerial);
 
@@ -296,8 +296,12 @@ public class EzvizService {
                         .build());
             }
 
-            // 批量保存（一次 flush，代替逐条 save）
-            channelRepository.saveAll(channels);
+            // 在事务中执行删除+保存（确保 @Transactional 不被调用方使用时也能正常工作）
+            transactionTemplate.execute(status -> {
+                channelRepository.deleteByDeviceSerial(deviceSerial);
+                channelRepository.saveAll(channels);
+                return null;
+            });
             log.debug("设备 {} 同步了 {} 个通道", deviceSerial, channels.size());
         } catch (Exception e) {
             log.error("同步设备 {} 通道失败: {}", deviceSerial, e.getMessage());
