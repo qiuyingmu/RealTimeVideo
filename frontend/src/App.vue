@@ -1,7 +1,7 @@
 <template>
   <div id="app-root">
-    <!-- 已登录用户的导航栏 -->
-    <nav v-if="authStore.isAuthenticated" class="navbar">
+    <!-- 已登录用户的导航栏（不在移动端路由显示，MobileLayout自带导航） -->
+    <nav v-if="authStore.isAuthenticated && !isMobileRoute" class="navbar">
       <div class="navbar-left">
         <router-link to="/" class="navbar-brand">
           <img src="/logo.svg" class="brand-icon" alt="logo" />
@@ -23,7 +23,7 @@
     </nav>
 
     <!-- 主内容区域 -->
-    <main :class="{ 'with-nav': authStore.isAuthenticated }">
+    <main :class="{ 'with-nav': authStore.isAuthenticated && !isMobileRoute, 'mobile-route': isMobileRoute }">
       <router-view v-slot="{ Component }">
         <transition name="fade" mode="out-in">
           <component :is="Component" />
@@ -34,11 +34,22 @@
 </template>
 
 <script setup>
+import { computed, onMounted } from 'vue'
 import { useAuthStore } from '@/store/auth'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 
 const authStore = useAuthStore()
 const router = useRouter()
+const route = useRoute()
+
+const isMobileRoute = computed(() => route.path.startsWith('/mobile'))
+
+// 挂载时应用已保存的夜间模式（全局生效）
+onMounted(() => {
+  if (localStorage.getItem('mobileDarkMode') === 'true') {
+    document.documentElement.classList.add('dark')
+  }
+})
 
 async function handleLogout() {
   await authStore.logout()
@@ -159,6 +170,11 @@ main {
 
 main.with-nav {
   padding: 24px;
+}
+
+main.mobile-route {
+  padding: 0;
+  min-height: 100vh;
 }
 
 /* ====== 移动端响应式 ====== */

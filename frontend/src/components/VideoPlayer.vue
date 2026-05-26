@@ -210,25 +210,35 @@ function createPlayer() {
 
   const plugins = props.channel.talkSupported ? ['talk'] : []
 
+  // 检测是否为移动端，选择合适模板
+  const isMobileDevice = window.innerWidth <= 768 || 'ontouchstart' in window
+  const playerTemplate = isMobileDevice ? 'mobileLive' : 'pcLive'
+
   playerInstance = new EZUIKit.EZUIKitPlayer({
     id: 'ezuikit-player',
     accessToken: currentToken,
     url: playUrl.value,
-    template: 'pcLive',             // 通用模板（移动端通过自定义控件实现全屏等体验）
+    template: playerTemplate,          // 根据设备自动选择模板
     autoplay: true,
     staticPath: '/ezuikit_cdn',
-    scaleMode: 1,
+    scaleMode: 1,                      // cover模式（填充全屏无黑边）
     audio: 0,
     width: '100%',
     height: '100%',
+    // 从用户偏好读取画质（默认高清）
+    videoLevel: localStorage.getItem('videoQuality') || 'hd',
+    videoLevelList: [localStorage.getItem('videoQuality') || 'hd'],
     mobileExtendOptions: {
       controls: ['ptz', 'rec', 'date'],
+      showClose: false,
+      showBack: false,
     },
-    videoLevelList: null,
     handleSuccess: () => {
       clearLoadTimeout()
       initialized.value = true; loading.value = false; retryCount.value = 0
       isRetrying.value = false; isSwitchingQuality.value = false; loadStep.value = 0
+      // 确保播放器容器不被内部resize挤压
+      stabilizePlayerContainer()
     },
     handleError: (err) => {
       clearLoadTimeout()
@@ -278,6 +288,47 @@ async function initPlayer() {
 
 function destroyPlayer() {
   destroyPlayerInstance()
+}
+
+// ====== 稳定播放器容器（防止被内部resize挤压） ======
+let resizeObserver = null
+
+function stabilizePlayerContainer() {
+  // 用ResizeObserver监控播放器内部DOM变化，防止EZUIKit内部缩放挤压父容器
+  const playerEl = document.getElementById('ezuikit-player')
+  if (!playerEl) return
+
+  // 如果有旧的observer先断开
+  if (resizeObserver) {
+    resizeObserver.disconnect()
+  }
+
+  resizeObserver = new ResizeObserver((entries) => {
+    for (const entry of entries) {
+      // 如果播放器内部元素试图缩小容器，锁定宽高
+      const wrapper = playerWrapperRef.value
+      if (wrapper) {
+        // 父容器保持100%占据，防止播放器内部autoresize缩小
+        const parent = wrapper.parentElement
+        if (parent) {
+          const parentRect = parent.getBoundingClientRect()
+          // 只有当父容器有合理尺寸时才设置flex-basis，防止干扰
+          if (parentRect.height > 100 && parentRect.width > 100) {
+            // 确保wrapper撑满父容器
+            wrapper.style.width = '100%'
+            wrapper.style.height = '100%'
+          }
+        }
+      }
+    }
+  })
+
+  // 监视播放器内部元素
+  resizeObserver.observe(playerEl)
+  // 也监视父容器
+  if (playerWrapperRef.value) {
+    resizeObserver.observe(playerWrapperRef.value)
+  }
 }
 
 // ====== 全屏控制 ======
@@ -387,6 +438,7 @@ onMounted(() => {
 onUnmounted(() => {
   if (networkMonitor) { clearInterval(networkMonitor); networkMonitor = null }
   clearTimeout(controlsHideTimer)
+  if (resizeObserver) { resizeObserver.disconnect(); resizeObserver = null }
   destroyPlayer()
 
   document.removeEventListener('fullscreenchange', onFullscreenChange)
