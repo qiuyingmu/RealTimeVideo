@@ -110,6 +110,14 @@ function normalizeError(error) {
   switch (status) {
     case 400:
       error.friendlyMessage = serverMsg || '请求参数有误'
+      // 追加字段级错误信息
+      if (response.data?.data && typeof response.data.data === 'object') {
+        const fieldErrors = Object.entries(response.data.data)
+          .map(([field, msg]) => `${field}: ${msg}`).join('; ')
+        if (fieldErrors) {
+          error.friendlyMessage += ' (' + fieldErrors + ')'
+        }
+      }
       break
     case 401:
       error.friendlyMessage = '请重新登录'

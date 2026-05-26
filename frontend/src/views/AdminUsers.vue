@@ -126,8 +126,8 @@
             </div>
             <div class="form-group">
               <label>密码 <span class="required">*</span></label>
-              <input v-model="createForm.password" type="password" placeholder="至少8位，含大小写字母、数字和特殊字符" required maxlength="100"/>
-              <small>必须包含大小写字母、数字和特殊字符</small>
+              <input v-model="createForm.password" type="password" placeholder="至少8位，需包含字母和数字" required maxlength="100"/>
+              <small>至少8位，需包含字母和数字</small>
             </div>
             <div class="form-group">
               <label>显示名称</label>
@@ -168,8 +168,8 @@
           <form class="user-form" @submit.prevent="handleResetPassword">
             <div class="form-group">
               <label>新密码 <span class="required">*</span></label>
-              <input v-model="newPassword" type="password" placeholder="至少8位，含大小写字母、数字和特殊字符" required minlength="8" maxlength="100"/>
-              <small>必须包含大小写字母、数字和特殊字符</small>
+              <input v-model="newPassword" type="password" placeholder="至少8位，需包含字母和数字" required minlength="8" maxlength="100"/>
+              <small>至少8位，需包含字母和数字</small>
             </div>
             <div class="form-actions">
               <button type="button" class="btn-cancel" @click="resetPwdUser = null">取消</button>
