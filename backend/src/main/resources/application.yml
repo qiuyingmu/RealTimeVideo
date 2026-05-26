@@ -1,21 +1,19 @@
 server:
-  port: 8080
+  port: ${SERVER_PORT:8080}
 
 spring:
   application:
     name: realtime-video-backend
 
-  # 默认使用H2内存数据库（开发环境）
-  # 生产环境请切换到MySQL并配置下方mysql profile
   datasource:
-    url: jdbc:h2:mem:realtimevideo
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
+    url: ${DB_URL:jdbc:h2:mem:realtimevideo}
+    driver-class-name: ${DB_DRIVER:org.h2.Driver}
+    username: ${DB_USERNAME:sa}
+    password: ${DB_PASSWORD:}
 
   h2:
     console:
-      enabled: true
+      enabled: ${H2_CONSOLE:true}
       path: /h2-console
 
   jpa:
@@ -27,50 +25,45 @@ spring:
       hibernate:
         format_sql: true
 
-# JWT配置
-jwt:
-  # 使用BASE64编码的密钥（至少256位 = 32字节）
-  # 生产环境请务必修改此密钥！
-  # 可使用以下命令生成新密钥：
-  #   Linux/Mac:  echo -n "YourRandomSecretKeyHereMakeItVeryLongAndSecure!" | base64
-  #   Windows:    certutil -decode <input> <output>  或在线BASE64工具
-  secret: dGhpc0lzQVZlcnlTZWN1cmVTZWNyZXRLZXlGb3JKV1RTaWduaW5nQmFzZTY0RW5jb2RlZEV4YW1wbGUyMDI0IQ==
-  access-token-expiration: 900000    # 15分钟（毫秒）
-  refresh-token-expiration: 604800000 # 7天（毫秒）
+# ──────────── 敏感配置（通过环境变量注入）────────────
+# 不要在 application.yml 中写入真实值！
+# 开发环境：在 IDE 运行配置或 .env 文件中设置环境变量
+# 生产环境：在服务器 / systemd / docker-compose 中设置
+# 示例：export EZS_APP_KEY=your_key
 
-# 安全配置
+jwt:
+  secret: ${JWT_SECRET:changeme}
+  access-token-expiration: 900000
+  refresh-token-expiration: 604800000
+
 security:
   login:
-    max-attempts: 5           # 最大登录失败次数
-    lock-duration-minutes: 30 # 锁定持续时间（分钟）
+    max-attempts: 5
+    lock-duration-minutes: 30
 
-# CORS配置
 cors:
-  allowed-origins: http://localhost:5173,http://localhost:3000
+  allowed-origins: ${CORS_ORIGINS:http://localhost:5173,http://localhost:3000}
 
-# 萤石云配置（请替换为你的实际值）
 ezviz:
-  app-key: REDACTED_KEY
-  app-secret: REDACTED_SECRET
+  app-key: ${EZS_APP_KEY:}
+  app-secret: ${EZS_APP_SECRET:}
 
-# 日志
 logging:
   level:
     com.realtimevideo: INFO
     org.springframework.security: WARN
 
 ---
-# 生产环境配置（需使用 --spring.profiles.active=prod 激活）
 spring:
   config:
     activate:
       on-profile: prod
 
   datasource:
-    url: jdbc:mysql://localhost:3306/realtime_video?useSSL=true&serverTimezone=Asia/Shanghai&characterEncoding=utf8mb4
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    username: root
-    password: your_mysql_password
+    url: ${DB_URL:jdbc:mysql://localhost:3306/realtime_video?useSSL=true&serverTimezone=Asia/Shanghai&characterEncoding=utf8mb4}
+    driver-class-name: ${DB_DRIVER:com.mysql.cj.jdbc.Driver}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:changeme}
 
   h2:
     console:
@@ -82,10 +75,8 @@ spring:
       ddl-auto: update
     show-sql: false
 
-# 生产环境密钥 --- 请务必修改为随机生成的BASE64密钥！
-# 生成命令: openssl rand -base64 32
 jwt:
-  secret: CHANGE_ME_TO_A_RANDOM_BASE64_SECRET_KEY_AT_LEAST_32_BYTES
+  secret: ${JWT_SECRET:}
 
 logging:
   level:
