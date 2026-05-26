@@ -1,0 +1,16 @@
+FROM eclipse-temurin:17-jre-alpine
+
+WORKDIR /app
+
+# 时区
+RUN apk add --no-cache tzdata && \
+    cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
+    echo "Asia/Shanghai" > /etc/timezone
+
+# 复制后端 JAR
+COPY target/realtime-video-backend-1.0.0.jar app.jar
+
+EXPOSE 8080
+
+# 生产环境启动（使用 prod profile + MySQL）
+ENTRYPOINT ["java", "-jar", "app.jar", "--spring.profiles.active=prod"]
