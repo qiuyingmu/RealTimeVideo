@@ -60,6 +60,51 @@
       </div>
     </div>
 
+    <!-- 后台管理（仅管理员可见） -->
+    <div v-if="authStore.isAdmin" class="settings-section">
+      <div class="section-header">后台管理</div>
+      <router-link to="/mobile/admin/users" class="settings-item link-item">
+        <div class="settings-item-left">
+          <svg viewBox="0 0 24 24" width="20" height="20" class="settings-icon">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <circle cx="9" cy="7" r="4" fill="none" stroke="currentColor" stroke-width="2"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <span>用户管理</span>
+        </div>
+        <svg viewBox="0 0 24 24" width="16" height="16" class="chevron">
+          <polyline points="9 18 15 12 9 6" fill="none" stroke="currentColor" stroke-width="2"/>
+        </svg>
+      </router-link>
+      <router-link to="/mobile/admin/permissions" class="settings-item link-item">
+        <div class="settings-item-left">
+          <svg viewBox="0 0 24 24" width="20" height="20" class="settings-icon">
+            <rect x="3" y="11" width="18" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4" fill="none" stroke="currentColor" stroke-width="2"/>
+          </svg>
+          <span>权限管理</span>
+        </div>
+        <svg viewBox="0 0 24 24" width="16" height="16" class="chevron">
+          <polyline points="9 18 15 12 9 6" fill="none" stroke="currentColor" stroke-width="2"/>
+        </svg>
+      </router-link>
+      <router-link to="/mobile/admin/logs" class="settings-item link-item">
+        <div class="settings-item-left">
+          <svg viewBox="0 0 24 24" width="20" height="20" class="settings-icon">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" fill="none" stroke="currentColor" stroke-width="2"/>
+            <polyline points="14 2 14 8 20 8" fill="none" stroke="currentColor" stroke-width="2"/>
+            <line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <span>日志管理</span>
+        </div>
+        <svg viewBox="0 0 24 24" width="16" height="16" class="chevron">
+          <polyline points="9 18 15 12 9 6" fill="none" stroke="currentColor" stroke-width="2"/>
+        </svg>
+      </router-link>
+    </div>
+
     <!-- 关于 -->
     <div class="settings-section">
       <div class="settings-item info-item">
@@ -301,6 +346,41 @@ async function handleLogout() {
   font-size: 13px;
   color: #64748b;
   font-weight: 500;
+}
+
+/* 后台管理区标题 */
+.section-header {
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 12px 16px 8px;
+}
+
+/* 链接项 */
+.link-item {
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.2s;
+}
+
+.link-item:active {
+  background: #f1f5f9;
+}
+
+.link-item .chevron {
+  color: #cbd5e1;
+  flex-shrink: 0;
+}
+
+html.dark .link-item:active {
+  background: rgba(255,255,255,0.05);
+}
+
+html.dark .section-header {
+  color: var(--text-secondary);
 }
 
 /* 退出按钮 */

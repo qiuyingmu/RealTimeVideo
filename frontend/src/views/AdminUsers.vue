@@ -1,9 +1,16 @@
 <template>
   <div class="admin-users">
     <div class="page-header">
-      <div>
-        <h1>用户管理</h1>
-        <p class="page-desc">管理系统用户 - 新增、编辑、启用/禁用用户</p>
+      <div class="page-header-left">
+        <button v-if="isMobileRoute" class="btn-back" @click="goBack" aria-label="返回">
+          <svg viewBox="0 0 24 24" width="20" height="20">
+            <polyline points="15 18 9 12 15 6" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <div>
+          <h1>用户管理</h1>
+          <p class="page-desc">管理系统用户 - 新增、编辑、启用/禁用用户</p>
+        </div>
       </div>
       <button class="btn-add" @click="showCreateDialog = true">
         <svg viewBox="0 0 24 24" width="18" height="18">
@@ -192,8 +199,18 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { adminApi } from '@/api'
+
+const router = useRouter()
+const route = useRoute()
+
+const isMobileRoute = computed(() => route.path.startsWith('/mobile/'))
+
+function goBack() {
+  router.push('/mobile/settings')
+}
 
 const users = ref([])
 const loading = ref(true)
@@ -314,6 +331,39 @@ function formatTime(timeStr) {
   align-items: flex-start;
   justify-content: space-between;
   margin-bottom: 24px;
+}
+
+.page-header-left {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.btn-back {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  color: var(--text-secondary);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s;
+  margin-top: 2px;
+}
+
+.btn-back:active {
+  background: #f1f5f9;
+  color: var(--text);
+}
+
+html.dark .btn-back:active {
+  background: rgba(255,255,255,0.1);
 }
 
 .page-header h1 {
@@ -685,10 +735,14 @@ function formatTime(timeStr) {
 
 /* 移动端适配 */
 @media (max-width: 768px) {
-  .admin-page { padding: 12px; }
+  .admin-users { padding: 12px; }
 
   .admin-header { flex-direction: column; gap: 12px; align-items: flex-start; }
   .admin-header h1 { font-size: 18px; }
+
+  .page-header { flex-direction: column; gap: 12px; }
+  .page-header h1 { font-size: 18px; }
+  .page-desc { font-size: 12px; }
 
   .user-table { font-size: 12px; }
   .user-table th, .user-table td { padding: 10px 8px; }

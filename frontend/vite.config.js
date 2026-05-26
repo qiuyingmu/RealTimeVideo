@@ -48,5 +48,24 @@ export default defineConfig({
     alias: {
       '@': '/src'
     }
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          // ezuikit-js 播放器库 → 独立 chunk（~3.5MB）
+          if (id.includes('node_modules/ezuikit-js')) {
+            return 'ezuikit'
+          }
+          // Vue/Vue Router/Pinia 框架 → 框架 chunk
+          if (id.includes('node_modules/vue') ||
+              id.includes('node_modules/vue-router') ||
+              id.includes('node_modules/pinia')) {
+            return 'framework'
+          }
+        }
+      }
+    },
+    chunkSizeWarningLimit: 3600
   }
 })

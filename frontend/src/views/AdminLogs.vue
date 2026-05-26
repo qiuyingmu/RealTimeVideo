@@ -1,8 +1,15 @@
 <template>
   <div class="logs-page">
     <div class="page-header">
-      <h1>操作日志</h1>
-      <p class="page-desc">记录用户的关键操作行为，用于安全审计和追溯</p>
+      <button v-if="isMobileRoute" class="btn-back" @click="goBack" aria-label="返回">
+        <svg viewBox="0 0 24 24" width="20" height="20">
+          <polyline points="15 18 9 12 15 6" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      <div>
+        <h1>操作日志</h1>
+        <p class="page-desc">记录用户的关键操作行为，用于安全审计和追溯</p>
+      </div>
     </div>
 
     <!-- 筛选栏 -->
@@ -77,8 +84,18 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { adminApi } from '@/api'
+
+const router = useRouter()
+const route = useRoute()
+
+const isMobileRoute = computed(() => route.path.startsWith('/mobile/'))
+
+function goBack() {
+  router.push('/mobile/settings')
+}
 
 const logs = ref([])
 const loading = ref(true)
@@ -137,8 +154,38 @@ onMounted(() => loadLogs(1))
   padding: 24px;
 }
 
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
 .page-header h1 { font-size: 22px; font-weight: 700; margin: 0; }
 .page-desc { color: var(--text-secondary); font-size: 13px; margin: 4px 0 0; }
+
+.btn-back {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  color: var(--text-secondary);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s;
+  margin-top: 2px;
+}
+
+.btn-back:active {
+  background: #f1f5f9;
+  color: var(--text);
+}
+
+html.dark .btn-back:active {
+  background: rgba(255,255,255,0.1);
+}
 
 .filters {
   display: flex;

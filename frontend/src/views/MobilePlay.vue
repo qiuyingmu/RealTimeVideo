@@ -131,10 +131,14 @@ const currentIndex = computed(() => {
 const hasPrev = computed(() => currentIndex.value > 0)
 const hasNext = computed(() => currentIndex.value >= 0 && currentIndex.value < channels.value.length - 1)
 
-// 播放地址
+// 当前画质偏好
+const currentQuality = ref(localStorage.getItem('videoQuality') || 'hd')
+
+// 播放地址（根据画质动态构建）
 const playUrl = computed(() => {
   if (!selectedChannel.value) return ''
-  return `ezopen://open.ys7.com/${selectedChannel.value.deviceSerial}/${selectedChannel.value.channelNo}.hd.live`
+  const quality = currentQuality.value === 'sd' ? 'sd' : currentQuality.value === 'fluent' ? 'fluent' : 'hd'
+  return `ezopen://open.ys7.com/${selectedChannel.value.deviceSerial}/${selectedChannel.value.channelNo}.${quality}.live`
 })
 
 function goBack() {

@@ -44,6 +44,25 @@ const routes = [
         name: 'MobileSettings',
         component: () => import('@/views/MobileSettings.vue'),
         meta: { requiresAuth: true }
+      },
+      // ---- 移动端管理后台（管理员可见） ----
+      {
+        path: 'admin/users',
+        name: 'MobileAdminUsers',
+        component: () => import('@/views/AdminUsers.vue'),
+        meta: { requiresAuth: true, requiresAdmin: true }
+      },
+      {
+        path: 'admin/permissions',
+        name: 'MobileAdminPermissions',
+        component: () => import('@/views/AdminPermissions.vue'),
+        meta: { requiresAuth: true, requiresAdmin: true }
+      },
+      {
+        path: 'admin/logs',
+        name: 'MobileAdminLogs',
+        component: () => import('@/views/AdminLogs.vue'),
+        meta: { requiresAuth: true, requiresAdmin: true }
       }
     ]
   },
