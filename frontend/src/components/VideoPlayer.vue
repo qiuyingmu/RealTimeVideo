@@ -115,8 +115,11 @@ function checkNetworkQuality() {
 }
 
 const playUrl = computed(() => {
-  // 先用NVR通道号格式试试（萤石云官方模板使用此格式）
-  const url = `ezopen://open.ys7.com/${props.channel.deviceSerial}/${props.channel.channelNo}.sd.live`
+  // 始终使用 deviceSerial + channelNo 构建播放地址
+  // NVR通道：ezopen://open.ys7.com/{NVR序列号}/{通道号}.hd.live
+  // IPC直连：ezopen://open.ys7.com/{设备序列号}/1.hd.live
+  // 注意：ipcSerial 仅用于内部标识，萤石云API不识别其作为直播地址
+  const url = `ezopen://open.ys7.com/${props.channel.deviceSerial}/${props.channel.channelNo}.hd.live`
   console.log('[VideoPlayer] URL:', url,
     '| deviceSerial:', props.channel.deviceSerial,
     '| ipcSerial:', props.channel.ipcSerial,
@@ -176,8 +179,11 @@ function createPlayer() {
     id: 'ezuikit-player',
     accessToken: currentToken,
     url: playUrl.value,
-    template: 'live',               // 直播模板
+    template: 'pcLive',             // PC直播模板（包含云台控制、截图、录制等）
     autoplay: true,                 // 自动播放
+    staticPath: '/ezuikit_cdn',      // 通过Vite代理CDN并修正WASM的MIME类型
+    scaleMode: 1,                   // 缩放模式: 0=contain(黑边) 1=cover(填充) 2=stretch
+    audio: 0,                       // 默认静音（浏览器自动播放策略）
     width: '100%',
     height: '100%',
     handleSuccess: () => {

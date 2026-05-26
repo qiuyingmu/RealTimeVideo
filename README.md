@@ -108,9 +108,30 @@ flowchart TB
 2. 前端调用 /api/auth/login → 后端验证返回 JWT Token
 3. 前端携带 Token 获取设备列表 /api/ezviz/channels
 4. 前端获取萤石云 accessToken → 传递给 EZUIKit 播放器
-5. EZUIKit 通过 ezopen:// 协议直接连接萤石云服务器播放视频
-6. 用户可切换画质 (流畅/高清/自动) 或控制 PTZ 云台
+5. EZUIKit 通过 ezopen:// 协议解析直播地址并播放视频
+6. 解码器文件（WASM）通过 Vite 代理加载，修正 CDN 的 MIME 类型
+7. 用户可使用云台控制 (PTZ)、截图、录制、画质切换等功能
 ```
+
+## 🔧 已解决问题记录
+
+### WASM 编译失败（Incorrect MIME type）
+- **原因**: 萤石云 CDN 返回 `.wasm` 文件时使用 `Content-Type: application/octet-stream`，浏览器 WebAssembly 流式编译要求 `application/wasm`
+- **解决**: 在 Vite 配置中添加 `/ezuikit_cdn` 代理，拦截 `.wasm` 文件响应并修正 Content-Type
+- **关键配置**: `vite.config.js` 中的 `proxy` 和 `wasm-mime-type-fix` 插件
+
+### ezopen 协议 10001 错误
+- **原因**: 使用了错误的设备序列号（`ipcSerial`），萤石云直播地址 API 只识别 `deviceSerial`
+- **解决**: 始终使用 `deviceSerial`（NVR 序列号）+ `channelNo`（通道号）构建播放地址
+- **格式**: `ezopen://open.ys7.com/{deviceSerial}/{channelNo}.hd.live`
+
+### SharedArrayBuffer 不可用
+- **原因**: 缺少 COEP/COOP 响应头
+- **解决**: 在 Vite 配置中添加 `Cross-Origin-Embedder-Policy: credentialless` 和 `Cross-Origin-Opener-Policy: same-origin`
+
+### 视频黑边问题
+- **原因**: 播放器缩放模式默认 `contain`（保持比例留黑边）
+- **解决**: 设置 `scaleMode: 1`（cover 填充模式）
 
 ## ✨ 功能特性
 

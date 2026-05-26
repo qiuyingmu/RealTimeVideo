@@ -664,8 +664,9 @@ async function syncFromEzviz() {
 
 .video-container {
   flex: 1;
-  padding: 16px 24px;
+  padding: 0;
   min-height: 0;
+  background: #000;
 }
 
 /* 欢迎页 */

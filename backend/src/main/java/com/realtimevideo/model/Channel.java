@@ -91,12 +91,12 @@ public class Channel {
     /**
      * 生成萤石云播放地址
      *
-     * NVR 通道使用设备序列号: ezopen://open.ys7.com/{deviceSerial}/{channelNo}.sd.live
-     * IPC 直连使用 IPC 序列号:  ezopen://open.ys7.com/{ipcSerial}/1.sd.live
+     * 始终使用 deviceSerial + channelNo 构建地址：
+     * NVR 通道: ezopen://open.ys7.com/{deviceSerial}/{channelNo}.hd.live
+     * IPC 直连: ezopen://open.ys7.com/{deviceSerial}/1.hd.live
+     * 注意：ipcSerial 仅用于内部标识，萤石云直播地址 API 不识别 ipcSerial
      */
     public String getEzvizPlayUrl() {
-        String serial = (ipcSerial != null && !ipcSerial.equals(deviceSerial)) ? ipcSerial : deviceSerial;
-        int ch = (ipcSerial != null && !ipcSerial.equals(deviceSerial)) ? 1 : channelNo;
-        return String.format("ezopen://open.ys7.com/%s/%d.sd.live", serial, ch);
+        return String.format("ezopen://open.ys7.com/%s/%d.hd.live", deviceSerial, channelNo);
     }
 }
