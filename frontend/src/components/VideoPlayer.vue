@@ -251,7 +251,7 @@ function createPlayer() {
       controls: ['ptzControl', 'fullScreen', 'hdSwitch'],
       showClose: false,
       showBack: false,
-      showPTZ: true,
+      showPTZ: false,             // 默认不打开PTZ面板，用户点击底部PTZ按钮才弹出
     },
     handleSuccess: () => {
       clearLoadTimeout()
@@ -671,9 +671,7 @@ onUnmounted(() => {
 }
 
 /* ====== EZUIKit 移动端 PTZ 控件尺寸优化 ====== */
-:deep(.ezui-ptz-control),
-:deep([class*="ptz"]),
-:deep([class*="PTZ"]) {
+:deep(.ezui-ptz-control) {
   max-height: 180px !important;
   overflow: hidden !important;
 }

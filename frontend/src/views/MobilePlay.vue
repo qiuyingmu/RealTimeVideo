@@ -93,6 +93,7 @@ let controlsTimer = null
 let touchStartX = 0
 let touchStartY = 0
 let touchStartTime = 0
+let isInitializing = false
 
 const SWIPE_THRESHOLD = 50
 
@@ -249,8 +250,12 @@ function onTouchEnd(e) {
 
 // 初始化播放器
 async function initPlayer() {
+  if (isInitializing) return
+  isInitializing = true
+
   if (!selectedChannel.value) {
     error.value = '未选择通道'
+    isInitializing = false
     return
   }
 
@@ -287,14 +292,16 @@ async function initPlayer() {
         controls: ['ptzControl', 'fullScreen', 'hdSwitch'],
         showClose: false,
         showBack: false,
-        showPTZ: true,
+        showPTZ: false,             // 默认不打开PTZ面板，用户点击底部PTZ按钮才弹出
       },
       handleSuccess: () => {
         initialized.value = true
         isSwitchingChannel.value = false
+        isInitializing = false
         showControls()
       },
       handleError: (err) => {
+        isInitializing = false
         const code = err?.code || ''
         const errorMap = {
           '395404': '设备不在线',
@@ -313,6 +320,7 @@ async function initPlayer() {
     error.value = '连接失败，请重试'
     initialized.value = false
     isSwitchingChannel.value = false
+    isInitializing = false
   }
 }
 
@@ -327,8 +335,17 @@ function destroyPlayer() {
 }
 
 // ====== 监听通道变化，优雅切换 ======
+// 首次赋值由 onMounted 直接调 initPlayer()，watch 跳过首次触发防止竞态
+let isInitialChannelSetup = false
+
 watch(selectedChannel, (newChannel, oldChannel) => {
   if (!newChannel) return
+
+  // 跳过首次赋值（onMounted 中会手动调 initPlayer），避免二次初始化
+  if (!isInitialChannelSetup) {
+    isInitialChannelSetup = true
+    return
+  }
 
   // 检查是否真正变化
   const isRealChange = !oldChannel ||
@@ -461,17 +478,16 @@ onUnmounted(() => {
 }
 
 /* ====== EZUIKit 移动端 PTZ 控件尺寸优化 ====== */
-:deep(.ezui-ptz-control),
-:deep([class*="ptz"]),
-:deep([class*="PTZ"]) {
-  max-height: 180px !important;
-  overflow: hidden !important;
+/* 只约束 PTZ 面板本身，不影响视频容器 */
+:deep(.ezui-ptz-panel) {
+  max-height: 200px !important;
+  transform: scale(0.7) !important;
+  transform-origin: bottom center !important;
 }
 
-:deep(.ezui-ptz-panel) {
-  max-height: 180px !important;
-  transform: scale(0.85) !important;
-  transform-origin: bottom center !important;
+/* 底部 PTZ 按钮不缩小 */
+:deep(.ezui-ptz-control) {
+  max-height: none !important;
 }
 
 /* 确保通道信息始终可见 */
