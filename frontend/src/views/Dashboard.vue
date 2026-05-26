@@ -126,7 +126,6 @@
               v-if="playerKey"
               :channel="selectedChannel"
               :cached-token="ezvizToken?.accessToken || null"
-              :app-key="ezvizToken?.appKey || ''"
               :key="playerKey"
             />
           </div>

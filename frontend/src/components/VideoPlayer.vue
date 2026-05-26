@@ -120,10 +120,13 @@ const playUrl = computed(() => {
   // IPC直连：ezopen://open.ys7.com/{设备序列号}/1.hd.live
   // 注意：ipcSerial 仅用于内部标识，萤石云API不识别其作为直播地址
   const url = `ezopen://open.ys7.com/${props.channel.deviceSerial}/${props.channel.channelNo}.hd.live`
-  console.log('[VideoPlayer] URL:', url,
-    '| deviceSerial:', props.channel.deviceSerial,
-    '| ipcSerial:', props.channel.ipcSerial,
-    '| chNo:', props.channel.channelNo)
+  // 仅开发环境打印调试日志
+  if (import.meta.env.DEV) {
+    console.log('[VideoPlayer] URL:',
+      `ezopen://open.ys7.com/${props.channel.deviceSerial}/${props.channel.channelNo}.hd.live`,
+      '| deviceSerial:', props.channel.deviceSerial,
+      '| chNo:', props.channel.channelNo)
+  }
   return url
 })
 

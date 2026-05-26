@@ -73,7 +73,7 @@ spring:
   jpa:
     database-platform: org.hibernate.dialect.MySQLDialect
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate  # 生产环境仅验证表结构，不自动修改。使用 Flyway 管理迁移
     show-sql: false
 
 jwt:

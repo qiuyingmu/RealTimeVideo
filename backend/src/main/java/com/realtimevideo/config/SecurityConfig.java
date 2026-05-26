@@ -47,7 +47,8 @@ public class SecurityConfig {
                     .requestMatchers("/api/auth/refresh").permitAll()
                     .requestMatchers("/api/auth/logout").permitAll()
                     .requestMatchers("/api/health").permitAll()
-                    .requestMatchers("/h2-console/**").permitAll()
+                    // H2 Console 仅限开发环境且仅本地访问（prod profile 已禁用）
+                    .requestMatchers("/h2-console/**").hasIpAddress("127.0.0.1")
                     .requestMatchers("/error").permitAll()
                     // 管理端接口 - 仅ADMIN角色可访问
                     .requestMatchers("/api/admin/**").hasRole("ADMIN")

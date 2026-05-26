@@ -115,7 +115,6 @@ public class EzvizService {
     public Map<String, String> getEzvizToken() {
         return Map.of(
                 "accessToken", getAccessToken(),
-                "appKey", appKey,
                 "expiresIn", String.valueOf(Duration.between(Instant.now(), tokenExpiresAt).getSeconds())
         );
     }
