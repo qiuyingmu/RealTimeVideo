@@ -28,5 +28,9 @@ Thumbs.db
 .env.local
 .env.production
 
+# ========== Deploy artifacts ==========
+deploy/node_modules/
+deploy/*.tar.gz
+
 # ========== WorkBuddy ==========
 .workbuddy/
