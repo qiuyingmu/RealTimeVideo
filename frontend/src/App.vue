@@ -158,4 +158,58 @@ main {
 main.with-nav {
   padding: 24px;
 }
+
+/* ====== 移动端响应式 ====== */
+@media (max-width: 768px) {
+  .navbar {
+    padding: 0 12px;
+    height: 56px;
+    z-index: 160; /* 高于sidebar-overlay，低于sidebar */
+  }
+
+  .brand-text {
+    font-size: 15px;
+  }
+
+  .brand-icon {
+    width: 26px;
+    height: 26px;
+  }
+
+  .navbar-right {
+    gap: 8px;
+  }
+
+  .nav-link {
+    font-size: 12px;
+    padding: 4px 8px;
+  }
+
+  .user-info {
+    padding: 0 8px;
+    gap: 4px;
+    border-left: none;
+  }
+
+  .username {
+    display: none; /* 移动端隐藏用户名 */
+  }
+
+  .role-badge {
+    font-size: 10px;
+  }
+
+  .btn-logout {
+    padding: 4px 10px;
+    font-size: 12px;
+  }
+
+  main {
+    min-height: calc(100vh - 56px);
+  }
+
+  main.with-nav {
+    padding: 16px;
+  }
+}
 </style>

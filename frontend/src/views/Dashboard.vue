@@ -1,7 +1,10 @@
 <template>
   <div class="dashboard-layout">
+    <!-- 移动端遮罩层 -->
+    <div v-if="sidebarOpen" class="sidebar-overlay" @click="sidebarOpen = false"></div>
+
     <!-- 左侧：设备/通道树 -->
-    <aside class="sidebar">
+    <aside class="sidebar" :class="{ open: sidebarOpen }">
       <div class="sidebar-header">
         <h2>设备列表</h2>
         <div class="sidebar-actions">
@@ -97,11 +100,21 @@
       <template v-if="selectedChannel">
         <div class="video-section">
           <div class="video-header">
-            <div class="video-title">
-              <strong>{{ selectedChannel.channelName || '通道' + selectedChannel.channelNo }}</strong>
-              <span class="video-meta">
-                {{ getDeviceName(selectedChannel.deviceSerial) }} · CH{{ selectedChannel.channelNo }}
-              </span>
+            <div class="video-title-area">
+              <!-- 移动端：设备列表切换按钮 -->
+              <button class="btn-sidebar-toggle" @click="sidebarOpen = !sidebarOpen" aria-label="切换设备列表">
+                <svg viewBox="0 0 24 24" width="20" height="20">
+                  <line x1="3" y1="6" x2="21" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <line x1="3" y1="12" x2="21" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <line x1="3" y1="18" x2="21" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+              </button>
+              <div class="video-title">
+                <strong>{{ selectedChannel.channelName || '通道' + selectedChannel.channelNo }}</strong>
+                <span class="video-meta">
+                  {{ getDeviceName(selectedChannel.deviceSerial) }} · CH{{ selectedChannel.channelNo }}
+                </span>
+              </div>
             </div>
             <span class="video-status" :class="selectedChannel.status">
               <span class="status-dot"></span>
@@ -155,6 +168,7 @@ const selectedChannel = ref(null)
 const playerKey = ref(0)
 const searchQuery = ref('')
 const videoContainer = ref(null)
+const sidebarOpen = ref(false)
 
 // ---- EZVIZ Token 缓存（全局共享，跨组件） ----
 const ezvizToken = ref(null)
@@ -241,7 +255,8 @@ function selectFirstOnline() {
 function selectChannel(ch) {
   selectedChannel.value = ch
   playerKey.value++
-  // 提前获取 Token（VideoPlayer 可以复用缓存的 Token）
+  // 移动端：选择通道后关闭侧边栏
+  sidebarOpen.value = false
   fetchEzvizToken()
 }
 
@@ -597,6 +612,30 @@ async function syncFromEzviz() {
   border-bottom: 1px solid var(--border);
 }
 
+.video-title-area {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.btn-sidebar-toggle {
+  display: none;
+  padding: 6px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all 0.2s;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-sidebar-toggle:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
 .video-title {
   display: flex;
   flex-direction: column;
@@ -656,5 +695,111 @@ async function syncFromEzviz() {
 
 .spinning {
   animation: spin 1s linear infinite;
+}
+
+/* ====== 移动端响应式 ====== */
+.sidebar-overlay {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .dashboard-layout {
+    flex-direction: column;
+    height: calc(100vh - 56px);
+    margin: -16px;
+  }
+
+  /* 侧边栏：抽屉式滑入 */
+  .sidebar {
+    position: fixed;
+    top: 56px;
+    left: 0;
+    bottom: 0;
+    width: 280px;
+    min-width: 280px;
+    z-index: 200;
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  .sidebar-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 150;
+  }
+
+  /* 移动端：显示侧边栏切换按钮 */
+  .btn-sidebar-toggle {
+    display: flex;
+  }
+
+  /* 视频区域 */
+  .main-content {
+    width: 100%;
+  }
+
+  .video-header {
+    padding: 10px 12px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .video-title strong {
+    font-size: 14px;
+  }
+
+  .video-title-area {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .video-meta {
+    font-size: 11px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .video-container {
+    padding: 0;
+  }
+
+  .video-status {
+    font-size: 12px;
+  }
+
+  /* 欢迎页 */
+  .welcome-screen {
+    padding: 20px;
+  }
+
+  .welcome-screen h2 {
+    font-size: 17px;
+  }
+
+  .welcome-screen p {
+    font-size: 13px;
+    text-align: center;
+  }
+
+  /* 设备树调整 */
+  .tree-channel {
+    padding: 10px 12px 10px 32px;
+  }
+
+  .tree-group-header {
+    padding: 12px 12px;
+  }
+
+  .group-name {
+    font-size: 14px;
+  }
 }
 </style>
