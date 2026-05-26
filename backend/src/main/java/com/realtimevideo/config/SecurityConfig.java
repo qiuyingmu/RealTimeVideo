@@ -45,6 +45,7 @@ public class SecurityConfig {
                     // 公开端点
                     .requestMatchers("/api/auth/login").permitAll()
                     .requestMatchers("/api/auth/refresh").permitAll()
+                    .requestMatchers("/api/auth/logout").permitAll()
                     .requestMatchers("/api/health").permitAll()
                     .requestMatchers("/h2-console/**").permitAll()
                     .requestMatchers("/error").permitAll()
