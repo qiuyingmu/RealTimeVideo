@@ -60,7 +60,7 @@ api.interceptors.response.use(
       if (!authStore.refreshToken) {
         authStore.logout()
         isRefreshing = false
-        return Promise.reject(error)
+        return Promise.reject(normalizeError(error))
       }
 
       try {
@@ -77,15 +77,62 @@ api.interceptors.response.use(
       } catch (refreshError) {
         processQueue(refreshError, null)
         authStore.logout()
-        return Promise.reject(refreshError)
+        return Promise.reject(normalizeError(refreshError))
       } finally {
         isRefreshing = false
       }
     }
 
-    return Promise.reject(error)
+    return Promise.reject(normalizeError(error))
   }
 )
+
+/**
+ * 统一错误消息格式化 — 绝不暴露原始堆栈/异常信息
+ */
+function normalizeError(error) {
+  const response = error.response
+  if (!response) {
+    // 网络不通 / 超时
+    if (error.code === 'ECONNABORTED') {
+      error.friendlyMessage = '请求超时，请检查网络后重试'
+    } else if (error.code === 'ERR_NETWORK') {
+      error.friendlyMessage = '网络连接失败，请检查网络'
+    } else {
+      error.friendlyMessage = '网络异常，请稍后重试'
+    }
+    return error
+  }
+
+  const status = response.status
+  const serverMsg = response.data?.message || ''
+
+  switch (status) {
+    case 400:
+      error.friendlyMessage = serverMsg || '请求参数有误'
+      break
+    case 401:
+      error.friendlyMessage = '请重新登录'
+      break
+    case 403:
+      error.friendlyMessage = '权限不足，无法执行此操作'
+      break
+    case 404:
+      error.friendlyMessage = serverMsg || '请求的数据不存在'
+      break
+    case 429:
+      error.friendlyMessage = '操作过于频繁，请稍后再试'
+      break
+    case 500:
+    case 502:
+    case 503:
+      error.friendlyMessage = '服务器繁忙，请稍后重试'
+      break
+    default:
+      error.friendlyMessage = serverMsg || '请求失败，请重试'
+  }
+  return error
+}
 
 // ========== API 方法 ==========
 

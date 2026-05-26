@@ -221,7 +221,7 @@ async function initPlayer() {
     createPlayer()
   } catch (err) {
     clearLoadTimeout(); currentToken = null
-    error.value = '连接失败: ' + (err.response?.data?.message || err.message)
+    error.value = '连接失败: ' + (err.friendlyMessage || '网络异常，请重试')
     loading.value = false; isSwitchingQuality.value = false
   } finally {
     isInitializing = false

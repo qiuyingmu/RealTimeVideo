@@ -286,7 +286,7 @@ async function enablePtzAll() {
     alert(res.data.message)
     await refreshChannels()
   } catch (err) {
-    alert('操作失败: ' + (err.response?.data?.message || err.message))
+    alert('操作失败: ' + (err.friendlyMessage || '请重试'))
   }
 }
 
@@ -333,7 +333,7 @@ async function syncFromEzviz() {
     await refreshChannels()
     alert(response.data.message)
   } catch (err) {
-    alert('同步失败: ' + (err.response?.data?.message || err.message))
+    alert('同步失败: ' + (err.friendlyMessage || '请重试'))
   } finally {
     syncing.value = false
   }

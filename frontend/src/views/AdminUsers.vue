@@ -216,7 +216,7 @@ async function fetchUsers() {
     const response = await adminApi.getUsers()
     users.value = response.data.data || []
   } catch (err) {
-    error.value = '获取用户列表失败: ' + (err.response?.data?.message || err.message)
+    error.value = err.friendlyMessage || '获取用户列表失败'
   } finally {
     loading.value = false
   }
@@ -234,7 +234,7 @@ async function createUser() {
     createForm.role = 'ROLE_USER'
     await fetchUsers()
   } catch (err) {
-    alert('创建用户失败: ' + (err.response?.data?.message || err.message))
+    alert('创建用户失败: ' + (err.friendlyMessage || '请重试'))
   } finally {
     creating.value = false
   }
@@ -247,7 +247,7 @@ async function toggleEnabled(user) {
     await adminApi.toggleEnabled(user.id)
     await fetchUsers()
   } catch (err) {
-    alert(`${action}用户失败: ` + (err.response?.data?.message || err.message))
+    alert(`${action}用户失败: ` + (err.friendlyMessage || '请重试'))
   }
 }
 
@@ -264,7 +264,7 @@ async function handleResetPassword() {
     resetPwdUser.value = null
     alert('密码重置成功')
   } catch (err) {
-    alert('重置密码失败: ' + (err.response?.data?.message || err.message))
+    alert('重置密码失败: ' + (err.friendlyMessage || '请重试'))
   } finally {
     resetting.value = false
   }
@@ -280,7 +280,7 @@ async function confirmDelete(user) {
     await adminApi.deleteUser(user.id)
     await fetchUsers()
   } catch (err) {
-    alert('删除用户失败: ' + (err.response?.data?.message || err.message))
+    alert('删除用户失败: ' + (err.friendlyMessage || '请重试'))
   }
 }
 

@@ -135,16 +135,7 @@ async function handleLogin() {
     const redirect = route.query.redirect || '/'
     router.push(redirect)
   } catch (error) {
-    const msg = error.response?.data?.message
-    if (msg) {
-      errorMessage.value = msg
-    } else if (error.response?.status === 429) {
-      errorMessage.value = '请求过于频繁，请稍后再试'
-    } else if (error.code === 'ERR_NETWORK') {
-      errorMessage.value = '网络连接失败，请检查服务器状态'
-    } else {
-      errorMessage.value = '登录失败，请重试'
-    }
+    errorMessage.value = error.friendlyMessage || '登录失败，请重试'
   } finally {
     loading.value = false
   }
