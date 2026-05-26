@@ -41,12 +41,18 @@ export const useAuthStore = defineStore('auth', () => {
     return data
   }
 
-  function logout() {
-    // 尝试通知后端登出（不阻塞）
-    if (refreshToken.value) {
-      authApi.logout(refreshToken.value).catch(() => {})
+  async function logout() {
+    // 先通知后端登出（确保携带有效token）
+    const currentRefreshToken = refreshToken.value
+    if (currentRefreshToken) {
+      try {
+        await authApi.logout(currentRefreshToken)
+      } catch (e) {
+        // 即使后端失败也清理本地状态
+      }
     }
 
+    // 清理本地状态
     accessToken.value = ''
     refreshToken.value = ''
     username.value = ''

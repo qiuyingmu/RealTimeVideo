@@ -10,6 +10,7 @@ import com.realtimevideo.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -52,21 +53,23 @@ public class AuthController {
             @RequestHeader("Authorization") String authHeader,
             @RequestBody(required = false) Map<String, String> body,
             HttpServletRequest httpRequest) {
-        String accessToken = null;
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            accessToken = authHeader.substring(7);
-        }
-        String refreshToken = body != null ? body.get("refreshToken") : null;
+        try {
+            String accessToken = null;
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                accessToken = authHeader.substring(7);
 
-        // 记录用户名（从过期 token 中提取）
-        if (accessToken != null) {
-            try {
-                String username = jwtService.extractUsername(accessToken);
-                auditLogService.log("LOGOUT", "user:" + username, "用户登出", httpRequest);
-            } catch (Exception ignored) {}
+                // 记录用户名
+                try {
+                    String username = jwtService.extractUsername(accessToken);
+                    auditLogService.log("LOGOUT", "user:" + username, "用户登出", httpRequest);
+                } catch (Exception ignored) {
+                }
+            }
+            String refreshToken = body != null ? body.get("refreshToken") : null;
+            userService.logout(accessToken, refreshToken);
+        } catch (Exception e) {
+            log.warn("登出处理异常: {}", e.getMessage());
         }
-
-        userService.logout(accessToken, refreshToken);
         return ResponseEntity.ok(ApiResponse.success("登出成功", null));
     }
 
