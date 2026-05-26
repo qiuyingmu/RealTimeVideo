@@ -30,7 +30,7 @@ cd $PROJECT_DIR
 # 3. 配置环境变量
 echo "[3/6] 配置环境变量..."
 if [ ! -f ".env" ]; then
-    cp deploy/.env.production .env
+    cp deploy/env.production .env
     echo "⚠️  请编辑 .env 文件填入真实配置，然后重新运行本脚本"
     echo "    需要配置: JWT_SECRET, EZS_APP_KEY, EZS_APP_SECRET"
     exit 1
