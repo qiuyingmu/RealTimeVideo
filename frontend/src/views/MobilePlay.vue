@@ -2,8 +2,18 @@
   <div class="mobile-play" ref="playPageRef">
     <!-- 视频播放器区域 -->
     <div class="player-area" ref="playerAreaRef">
+      <!-- 通道切换过渡 -->
+      <div v-if="isSwitchingChannel" class="player-loading">
+        <div class="loading-spinner">
+          <svg class="spinner-ring" viewBox="0 0 50 50">
+            <circle cx="25" cy="25" r="20" fill="none" stroke-width="3"/>
+          </svg>
+        </div>
+        <p class="loading-text">切换通道...</p>
+      </div>
+
       <!-- 加载中 -->
-      <div v-if="!initialized && !error" class="player-loading">
+      <div v-if="!initialized && !error && !isSwitchingChannel" class="player-loading">
         <div class="loading-spinner">
           <svg class="spinner-ring" viewBox="0 0 50 50">
             <circle cx="25" cy="25" r="20" fill="none" stroke-width="3"/>
@@ -13,7 +23,7 @@
       </div>
 
       <!-- 播放失败 -->
-      <div v-if="error" class="player-error">
+      <div v-if="error && !isSwitchingChannel" class="player-error">
         <svg viewBox="0 0 60 60" width="40" height="40">
           <circle cx="30" cy="30" r="22" fill="none" stroke="#f87171" stroke-width="2.5"/>
           <line x1="20" y1="20" x2="40" y2="40" stroke="#f87171" stroke-width="2.5"/>
@@ -27,7 +37,7 @@
       <div id="mobile-ezuikit-player" class="ezuikit-player" v-show="!error"></div>
 
       <!-- 顶部返回和信息 -->
-      <div class="player-top-bar" v-if="initialized">
+      <div class="player-top-bar" v-if="initialized && !isSwitchingChannel">
         <button class="top-btn" @click="goBack">
           <svg viewBox="0 0 24 24" width="22" height="22">
             <polyline points="15 18 9 12 15 6" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -41,7 +51,7 @@
       </div>
 
       <!-- 底部控制栏 -->
-      <div class="player-bottom-bar" v-if="initialized" :class="{ visible: controlsVisible }">
+      <div class="player-bottom-bar" v-if="initialized && !isSwitchingChannel" :class="{ visible: controlsVisible }">
         <button class="control-btn" @click="prevChannel" :disabled="!hasPrev">
           <svg viewBox="0 0 24 24" width="22" height="22">
             <polygon points="19 20 9 12 19 4 19 20" fill="none" stroke="currentColor" stroke-width="2"/>
@@ -71,7 +81,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ezvizApi } from '@/api'
 import EZUIKit from 'ezuikit-js'
@@ -79,6 +89,7 @@ import EZUIKit from 'ezuikit-js'
 const router = useRouter()
 
 const initialized = ref(false)
+const isSwitchingChannel = ref(false)
 const error = ref('')
 const isFullscreen = ref(false)
 const controlsVisible = ref(true)
@@ -147,13 +158,11 @@ function toggleControls() {
   }
 }
 
-// 切换通道
+// 切换通道（只更新 ref，由 watch 自动触发放置器重建）
 function switchToChannel(ch) {
   if (!ch) return
   selectedChannel.value = ch
   sessionStorage.setItem('mobileSelectedChannel', JSON.stringify(ch))
-  destroyPlayer()
-  initPlayer()
 }
 
 function prevChannel() {
@@ -263,6 +272,7 @@ async function initPlayer() {
       videoLevel: localStorage.getItem('videoQuality') === 'sd' ? 'sd' : localStorage.getItem('videoQuality') === 'fluent' ? 'fluent' : 'hd',
       handleSuccess: () => {
         initialized.value = true
+        isSwitchingChannel.value = false
         showControls()
       },
       handleError: (err) => {
@@ -277,11 +287,13 @@ async function initPlayer() {
         }
         error.value = errorMap[String(code)] || (err?.msg || err?.message || '播放失败')
         initialized.value = false
+        isSwitchingChannel.value = false
       }
     })
   } catch (e) {
     error.value = '连接失败，请重试'
     initialized.value = false
+    isSwitchingChannel.value = false
   }
 }
 
@@ -294,6 +306,26 @@ function destroyPlayer() {
     playerInstance = null
   }
 }
+
+// ====== 监听通道变化，优雅切换 ======
+watch(selectedChannel, (newChannel, oldChannel) => {
+  if (!newChannel) return
+
+  // 检查是否真正变化
+  const isRealChange = !oldChannel ||
+    oldChannel.deviceSerial !== newChannel.deviceSerial ||
+    oldChannel.channelNo !== newChannel.channelNo
+
+  if (!isRealChange) return
+
+  // 显示切换过渡层，然后优雅重建播放器
+  isSwitchingChannel.value = true
+
+  setTimeout(() => {
+    destroyPlayer()
+    initPlayer()
+  }, 50)
+})
 
 onMounted(async () => {
   // 读取选中通道

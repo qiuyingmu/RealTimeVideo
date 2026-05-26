@@ -1,7 +1,17 @@
 <template>
   <div class="video-player-wrapper" ref="playerWrapperRef">
+    <!-- 通道切换过渡 -->
+    <div v-if="isSwitchingChannel" class="player-loading channel-switching-overlay">
+      <div class="loading-spinner">
+        <svg class="spinner-ring" viewBox="0 0 50 50">
+          <circle cx="25" cy="25" r="20" fill="none" stroke-width="3"/>
+        </svg>
+      </div>
+      <p class="loading-text">切换通道...</p>
+    </div>
+
     <!-- 加载中 -->
-    <div v-if="!initialized && !error && !isRetrying && !isSwitchingQuality" class="player-loading">
+    <div v-if="!initialized && !error && !isRetrying && !isSwitchingQuality && !isSwitchingChannel" class="player-loading">
       <div class="loading-spinner">
         <svg class="spinner-ring" viewBox="0 0 50 50">
           <circle cx="25" cy="25" r="20" fill="none" stroke-width="3"/>
@@ -41,7 +51,7 @@
     </div>
 
     <!-- 播放失败 -->
-    <div v-if="error && !isRetrying && !isSwitchingQuality" class="player-error">
+    <div v-if="error && !isRetrying && !isSwitchingQuality && !isSwitchingChannel" class="player-error">
       <svg viewBox="0 0 80 80" width="56" height="56">
         <circle cx="40" cy="40" r="30" fill="none" stroke="#f87171" stroke-width="3"/>
         <line x1="28" y1="28" x2="52" y2="52" stroke="#f87171" stroke-width="3"/>
@@ -59,13 +69,13 @@
     <div id="ezuikit-player" class="ezuikit-player" v-show="!error"></div>
 
     <!-- 网速指示器 -->
-    <div v-if="initialized && !isSwitchingQuality && !isRetrying" class="network-indicator" :class="networkQuality">
+    <div v-if="initialized && !isSwitchingQuality && !isRetrying && !isSwitchingChannel" class="network-indicator" :class="networkQuality">
       <span class="ni-dot"></span>
       <span class="ni-label">{{ networkLabel }}</span>
     </div>
 
     <!-- ====== 移动端覆盖层控件 ====== -->
-    <div v-if="initialized && isMobile" class="mobile-controls-overlay" @click="toggleControls">
+    <div v-if="initialized && isMobile && !isSwitchingChannel" class="mobile-controls-overlay" @click="toggleControls">
       <!-- 切频道按钮（左侧） -->
       <button v-if="showMobileControls" class="mobile-nav-btn mobile-nav-left" @click.stop="emitPrevChannel" aria-label="上一个通道">
         <svg viewBox="0 0 24 24" width="22" height="22"><polyline points="15 18 9 12 15 6" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -90,7 +100,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { ezvizApi } from '@/api'
 import EZUIKit from 'ezuikit-js'
 
@@ -113,6 +123,7 @@ const loadTimeout = ref(null)
 const retryCount = ref(0)
 const isRetrying = ref(false)
 const isSwitchingQuality = ref(false)
+const isSwitchingChannel = ref(false)
 const networkQuality = ref('good')
 const isFullscreen = ref(false)
 const showMobileControls = ref(false)
@@ -127,6 +138,7 @@ let isInitializing = false
 let controlsHideTimer = null
 let touchStartX = 0
 let touchStartY = 0
+let latestChannelId = '' // 用于判断 channel 是否真正变化
 
 const CONNECT_TIMEOUT = 30000
 const RETRY_BASE_DELAY = 1000
@@ -191,7 +203,7 @@ async function handleConnectTimeout() {
     createPlayer()
   } else {
     error.value = '连接超时，请检查网络后重试'
-    loading.value = false
+    loading.value = false; isSwitchingChannel.value = false
   }
 }
 
@@ -236,7 +248,7 @@ function createPlayer() {
     handleSuccess: () => {
       clearLoadTimeout()
       initialized.value = true; loading.value = false; retryCount.value = 0
-      isRetrying.value = false; isSwitchingQuality.value = false; loadStep.value = 0
+      isRetrying.value = false; isSwitchingQuality.value = false; isSwitchingChannel.value = false; loadStep.value = 0
       // 确保播放器容器不被内部resize挤压
       stabilizePlayerContainer()
     },
@@ -253,7 +265,7 @@ function createPlayer() {
           '3820032': '通道不存在', '10001': '视频流协议错误',
         }
         error.value = errorMap[String(code)] || `${(err?.msg || err?.message || '播放失败')}(${code})`
-        loading.value = false; isSwitchingQuality.value = false
+        loading.value = false; isSwitchingQuality.value = false; isSwitchingChannel.value = false
       }
     }
   })
@@ -280,7 +292,7 @@ async function initPlayer() {
   } catch (err) {
     clearLoadTimeout(); currentToken = null
     error.value = '连接失败: ' + (err.friendlyMessage || '网络异常，请重试')
-    loading.value = false; isSwitchingQuality.value = false
+    loading.value = false; isSwitchingQuality.value = false; isSwitchingChannel.value = false
   } finally {
     isInitializing = false
   }
@@ -419,6 +431,32 @@ function checkOrientation() {
   }))
 }
 
+// ====== 监听通道变化，优雅切换（防止 playerKey++ 暴力重建导致白闪） ======
+watch(() => props.channel, (newChannel, oldChannel) => {
+  if (!newChannel) return
+
+  // 检查是否真正变化（不同设备/通道号才需要重建）
+  const isRealChange = !oldChannel ||
+    oldChannel.deviceSerial !== newChannel.deviceSerial ||
+    oldChannel.channelNo !== newChannel.channelNo
+
+  if (!isRealChange) return
+
+  // 记录最新通道ID，防止重复触发
+  const newId = newChannel.deviceSerial + '-' + newChannel.channelNo
+  if (newId === latestChannelId) return
+  latestChannelId = newId
+
+  // 优雅切换：先标记切换状态（显示过渡覆盖层），再重建播放器
+  isSwitchingChannel.value = true
+
+  // 短暂延迟确保 DOM 更新覆盖层后再销毁播放器
+  setTimeout(() => {
+    destroyPlayerInstance()
+    initPlayer()
+  }, 50)
+}, { immediate: false })
+
 // ====== 生命周期 ======
 onMounted(() => {
   isMobile.value = window.innerWidth <= 768
@@ -481,7 +519,8 @@ onUnmounted(() => {
   align-items: center; justify-content: center;
   gap: 12px; background: #0f0f1a; color: #94a3b8;
 }
-.quality-switching-overlay {
+.quality-switching-overlay,
+.channel-switching-overlay {
   z-index: 15; background: rgba(15, 15, 26, 0.85); animation: fadeIn 0.2s ease;
 }
 

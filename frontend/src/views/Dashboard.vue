@@ -123,10 +123,8 @@
           </div>
           <div class="video-container" ref="videoContainer">
             <VideoPlayer
-              v-if="playerKey"
               :channel="selectedChannel"
               :cached-token="ezvizToken?.accessToken || null"
-              :key="playerKey"
               @prev-channel="goToPrevChannel"
               @next-channel="goToNextChannel"
             />
@@ -166,7 +164,6 @@ const channels = ref([])
 const loading = ref(true)
 const syncing = ref(false)
 const selectedChannel = ref(null)
-const playerKey = ref(0)
 const searchQuery = ref('')
 const videoContainer = ref(null)
 const sidebarOpen = ref(false)
@@ -277,7 +274,6 @@ function selectFirstOnline() {
 
 function selectChannel(ch) {
   selectedChannel.value = ch
-  playerKey.value++
   // 移动端：选择通道后关闭侧边栏
   sidebarOpen.value = false
   fetchEzvizToken()
@@ -372,12 +368,40 @@ onMounted(async () => {
         )
         if (updated) {
           selectedChannel.value.status = updated.status
-          // 更新其他动态字段但不替换对象引用
           selectedChannel.value.deviceName = updated.deviceName
           selectedChannel.value.channelName = updated.channelName
         }
       }
-      channels.value = newChannels
+      // 通道列表也做智能合并（保留现有对象引用，避免设备树闪烁）
+      const oldChannels = channels.value
+      if (oldChannels.length === 0) {
+        channels.value = newChannels
+        return
+      }
+      const oldMap = new Map()
+      oldChannels.forEach((ch, i) => {
+        oldMap.set(ch.deviceSerial + '-' + ch.channelNo, { ch, index: i })
+      })
+      const merged = []
+      const seen = new Set()
+      for (const newCh of newChannels) {
+        const key = newCh.deviceSerial + '-' + newCh.channelNo
+        seen.add(key)
+        const existing = oldMap.get(key)
+        if (existing) {
+          existing.ch.status = newCh.status
+          existing.ch.deviceName = newCh.deviceName
+          existing.ch.channelName = newCh.channelName
+          merged.push(existing.ch)
+        } else {
+          merged.push(newCh)
+        }
+      }
+      if (seen.size !== oldMap.size) {
+        channels.value = merged
+      } else {
+        channels.value.splice(0, channels.value.length, ...merged)
+      }
     }).catch(() => {})
   }, 30000)
 

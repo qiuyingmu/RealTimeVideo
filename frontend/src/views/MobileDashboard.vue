@@ -19,8 +19,8 @@
     <div v-else class="device-scroll">
       <template v-if="allChannelList.length > 0">
         <div
-          v-for="(ch, idx) in allChannelList"
-          :key="ch.deviceSerial + '-' + ch.channelNo + '-' + idx"
+          v-for="ch in allChannelList"
+          :key="ch.deviceSerial + '-' + ch.channelNo"
           class="channel-card"
           :class="{ offline: ch.status !== 'online' }"
           @click="selectAndPlay(ch)"
@@ -137,11 +137,54 @@ onMounted(async () => {
     loading.value = false
   }
 
-  // 每30秒刷新状态
+  // 每30秒刷新状态（智能合并，保留对象引用避免卡片闪烁）
   refreshInterval = setInterval(async () => {
     try {
       const res = await ezvizApi.getAllChannels()
-      channels.value = res.data.data || []
+      const newChannels = res.data.data || []
+      const oldChannels = channels.value
+
+      if (oldChannels.length === 0) {
+        // 首次无数据，直接赋值
+        channels.value = newChannels
+        return
+      }
+
+      // 建立旧通道的快速查找索引
+      const oldMap = new Map()
+      oldChannels.forEach((ch, i) => {
+        oldMap.set(ch.deviceSerial + '-' + ch.channelNo, { ch, index: i })
+      })
+
+      // 遍历新数据，尝试复用旧对象
+      const merged = []
+      const seen = new Set()
+
+      for (const newCh of newChannels) {
+        const key = newCh.deviceSerial + '-' + newCh.channelNo
+        seen.add(key)
+        const existing = oldMap.get(key)
+        if (existing) {
+          // 复用旧对象，只更新动态字段（保持引用稳定，Vue 不重建 DOM）
+          existing.ch.status = newCh.status
+          existing.ch.deviceName = newCh.deviceName
+          existing.ch.channelName = newCh.channelName
+          merged.push(existing.ch)
+        } else {
+          // 新出现的通道，push 新对象
+          merged.push(newCh)
+        }
+      }
+
+      // 检查是否有被删除的通道，有则全量替换（避免残留）
+      if (seen.size !== oldMap.size) {
+        channels.value = merged
+      } else {
+        // 数量相同且所有旧通道都在新列表中 — 保持引用不变
+        // 需要在响应式数组层面触发更新，但保留对象引用
+        // 用 splice 替换数组内容而不改变数组引用
+        channels.value.splice(0, channels.value.length, ...merged)
+      }
     } catch (e) {}
   }, 30000)
 })
