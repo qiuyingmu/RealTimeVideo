@@ -138,7 +138,9 @@ async function deploy() {
       log('DOCKER', '⚠️ 容器未运行，尝试重建并启动...');
       await sshExec(conn, `cd /opt/realtime-video && docker compose build frontend && docker compose up -d frontend`, 'rebuild', 300000);
     } else {
-      // 3. 复制 dist 到容器内
+      // 3. 先清理容器内旧文件，再复制新 dist
+      log('DOCKER', '清理容器内旧文件...');
+      await sshExec(conn, `docker exec ${CONFIG.containerName} sh -c 'rm -rf /usr/share/nginx/html/assets && rm -f /usr/share/nginx/html/*.html /usr/share/nginx/html/*.svg'`, 'clean-old');
       log('DOCKER', '复制新文件到容器...');
       const copyCmd = `docker cp ${remoteTempDist}/. ${CONFIG.containerName}:/usr/share/nginx/html/`;
       await sshExec(conn, copyCmd, 'copy-dist');
