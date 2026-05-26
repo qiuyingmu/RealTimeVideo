@@ -120,7 +120,20 @@
             </div>
             <div class="form-group">
               <label>密码 <span class="required">*</span></label>
-              <input v-model="createForm.password" type="password" placeholder="至少8位，需包含字母和数字" required maxlength="100"/>
+              <div class="password-wrapper">
+                <input v-model="createForm.password" :type="showPwd ? 'text' : 'password'" placeholder="至少8位，需包含字母和数字" required maxlength="100"/>
+                <button type="button" class="toggle-pwd" @click="showPwd = !showPwd" tabindex="-1">
+                  <svg v-if="showPwd" viewBox="0 0 24 24" width="18" height="18">
+                    <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94" fill="none" stroke="currentColor" stroke-width="2"/>
+                    <path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19" fill="none" stroke="currentColor" stroke-width="2"/>
+                    <line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" stroke-width="2"/>
+                  </svg>
+                  <svg v-else viewBox="0 0 24 24" width="18" height="18">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" fill="none" stroke="currentColor" stroke-width="2"/>
+                    <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
+                  </svg>
+                </button>
+              </div>
               <small>至少8位，需包含字母和数字</small>
             </div>
             <div class="form-group">
@@ -190,6 +203,7 @@ const creating = ref(false)
 const resetPwdUser = ref(null)
 const newPassword = ref('')
 const resetting = ref(false)
+const showPwd = ref(false)
 
 const createForm = reactive({
   username: '',
@@ -560,6 +574,37 @@ function formatTime(timeStr) {
 .form-group label {
   font-size: 14px;
   font-weight: 500;
+}
+
+.password-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-wrapper input {
+  flex: 1;
+  padding-right: 40px;
+}
+
+.toggle-pwd {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-secondary);
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  border-radius: 4px;
+  transition: color 0.2s;
+}
+
+.toggle-pwd:hover {
+  color: var(--text);
 }
 
 .required {
