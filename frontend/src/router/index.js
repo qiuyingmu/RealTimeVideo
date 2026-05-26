@@ -1,6 +1,12 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/store/auth'
 
+// 移动端设备检测
+function isMobileDevice() {
+  if (typeof window === 'undefined') return false
+  return window.innerWidth <= 768 || 'ontouchstart' in window
+}
+
 const routes = [
   {
     path: '/login',
@@ -13,6 +19,33 @@ const routes = [
     name: 'Dashboard',
     component: () => import('@/views/Dashboard.vue'),
     meta: { requiresAuth: true }
+  },
+  // ---- 移动端路由（嵌套在 MobileLayout 布局下） ----
+  {
+    path: '/mobile',
+    component: () => import('@/views/MobileLayout.vue'),
+    meta: { requiresAuth: true, mobileLayout: true },
+    children: [
+      { path: '', redirect: { name: 'MobileDashboard' } },
+      {
+        path: 'dashboard',
+        name: 'MobileDashboard',
+        component: () => import('@/views/MobileDashboard.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
+        path: 'play',
+        name: 'MobilePlay',
+        component: () => import('@/views/MobilePlay.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
+        path: 'settings',
+        name: 'MobileSettings',
+        component: () => import('@/views/MobileSettings.vue'),
+        meta: { requiresAuth: true }
+      }
+    ]
   },
   {
     path: '/admin/users',
@@ -43,7 +76,7 @@ const router = createRouter({
   routes
 })
 
-// 路由守卫 - 认证检查
+// 路由守卫 - 认证检查 + 移动端重定向
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
 
@@ -54,11 +87,21 @@ router.beforeEach((to, from, next) => {
 
   // 已登录用户访问登录页，重定向到首页
   if (to.name === 'Login' && authStore.isAuthenticated) {
-    return next({ name: 'Dashboard' })
+    return next(isMobileDevice() ? { name: 'MobileDashboard' } : { name: 'Dashboard' })
   }
 
   // 需要管理员权限的页面
   if (to.meta.requiresAdmin && !authStore.isAdmin) {
+    return next(isMobileDevice() ? { name: 'MobileDashboard' } : { name: 'Dashboard' })
+  }
+
+  // 移动端访问桌面端首页 → 重定向到移动端首页
+  if (to.name === 'Dashboard' && isMobileDevice()) {
+    return next({ name: 'MobileDashboard' })
+  }
+
+  // 桌面端访问移动端页面 → 重定向到桌面端首页
+  if (to.meta.mobileLayout && !isMobileDevice()) {
     return next({ name: 'Dashboard' })
   }
 

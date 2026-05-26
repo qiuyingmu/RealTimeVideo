@@ -98,6 +98,11 @@ import { reactive, ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/store/auth'
 
+// 移动端检测
+function isMobileDevice() {
+  return window.innerWidth <= 768 || 'ontouchstart' in window
+}
+
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
@@ -127,7 +132,7 @@ async function handleLogin() {
 
   try {
     await authStore.login(form.username.trim(), form.password)
-    const redirect = route.query.redirect || '/'
+    const redirect = route.query.redirect || (isMobileDevice() ? '/mobile/dashboard' : '/')
     router.push(redirect)
   } catch (error) {
     errorMessage.value = error.friendlyMessage || '登录失败，请重试'

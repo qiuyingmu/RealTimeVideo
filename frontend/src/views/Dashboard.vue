@@ -360,16 +360,22 @@ onMounted(async () => {
   loading.value = false
 
   // 定时刷新通道状态（每30秒自动刷新一次，保持设备在线状态最新）
+  // 注意：不替换选中通道的对象引用，仅更新status字段，避免VideoPlayer因prop变化而抖动
   refreshInterval = setInterval(() => {
     ezvizApi.getAllChannels().then(res => {
       const newChannels = res.data.data || []
-      // 保持当前选中的通道对象引用更新
+      // 只更新选中通道的状态字段（保留引用，防止VideoPlayer重建）
       if (selectedChannel.value) {
         const updated = newChannels.find(c =>
           c.deviceSerial === selectedChannel.value.deviceSerial &&
           c.channelNo === selectedChannel.value.channelNo
         )
-        if (updated) selectedChannel.value = updated
+        if (updated) {
+          selectedChannel.value.status = updated.status
+          // 更新其他动态字段但不替换对象引用
+          selectedChannel.value.deviceName = updated.deviceName
+          selectedChannel.value.channelName = updated.channelName
+        }
       }
       channels.value = newChannels
     }).catch(() => {})
@@ -735,14 +741,13 @@ async function syncFromEzviz() {
 .video-status.offline { color: #94a3b8; }
 
 .video-container {
-  flex: 1;
+  flex: 1 1 0;
   padding: 0;
   background: #000;
-  /* 使用0而不是400px，让flex布局自动分配空间 */
-  min-height: 0;
-  /* 防止EZUIKit内部resize时容器收缩 */
-  flex-shrink: 0;
-  flex-basis: 0;
+  min-height: 200px;
+  min-width: 0;
+  position: relative;
+  overflow: hidden;
 }
 
 /* 欢迎页 */
@@ -846,14 +851,17 @@ async function syncFromEzviz() {
 
   .video-container {
     padding: 0;
-    /* 移动端视频占满可用空间，不设上限 */
-    min-height: 40vh;
+    flex: 1 1 0;
+    min-height: 30vh;
+    max-height: none;
+    position: relative;
+    overflow: hidden;
   }
 
   /* 小屏手机：视频最大化 */
   @media (max-height: 700px) {
     .video-container {
-      min-height: 55vh;
+      min-height: 40vh;
     }
   }
 
