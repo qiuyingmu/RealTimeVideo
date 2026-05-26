@@ -65,6 +65,11 @@ spring:
     driver-class-name: ${DB_DRIVER:com.mysql.cj.jdbc.Driver}
     username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD:changeme}
+    hikari:
+      connection-timeout: 30000
+      initialization-fail-timeout: -1
+      maximum-pool-size: 10
+      minimum-idle: 2
 
   h2:
     console:
@@ -73,15 +78,8 @@ spring:
   jpa:
     database-platform: org.hibernate.dialect.MySQLDialect
     hibernate:
-      ddl-auto: update  # 首次部署自动建表，稳定后可改为 validate
+      ddl-auto: update
     show-sql: false
-
-  datasource:
-    hikari:
-      connection-timeout: 30000
-      initialization-fail-timeout: -1
-      maximum-pool-size: 10
-      minimum-idle: 2
 
 jwt:
   secret: ${JWT_SECRET:}
