@@ -3,6 +3,7 @@ package com.realtimevideo.service;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import io.jsonwebtoken.security.WeakKeyException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -30,9 +31,22 @@ public class JwtService {
     /** 黑名单：存储已登出的 token → 过期时间 */
     private final ConcurrentHashMap<String, Date> blacklistedTokens = new ConcurrentHashMap<>();
 
+    private volatile SecretKey signingKey;
+
     private SecretKey getSigningKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(jwtSecret);
-        return Keys.hmacShaKeyFor(keyBytes);
+        if (signingKey != null) return signingKey;
+        synchronized (this) {
+            if (signingKey != null) return signingKey;
+            try {
+                byte[] keyBytes = Decoders.BASE64.decode(jwtSecret);
+                this.signingKey = Keys.hmacShaKeyFor(keyBytes);
+                log.info("JWT 密钥加载成功 ({} bits)", keyBytes.length * 8);
+            } catch (WeakKeyException | IllegalArgumentException e) {
+                log.warn("JWT 密钥强度不足 ({}), 自动生成临时密钥", e.getMessage());
+                this.signingKey = Jwts.SIG.HS256.key().build();
+            }
+            return signingKey;
+        }
     }
 
     // ---- Token 生成 ----
