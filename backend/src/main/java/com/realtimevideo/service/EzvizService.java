@@ -126,18 +126,25 @@ public class EzvizService {
 
     /**
      * 获取所有通道（带 5 秒缓存）
-     * 前端每 30 秒轮询一次，缓存可以显著减少数据库查询
+     * 前端每 30 秒轮询一次，缓存可以显著减少数据库查询。
+     * 如果数据库为空（启动后尚未同步），自动触发同步。
      */
     public List<Channel> getAllChannels() {
-        // 快速路径：缓存有效
         if (cachedChannels != null && Instant.now().isBefore(channelsCacheExpiresAt)) {
             return cachedChannels;
         }
-        // 需要刷新
         channelsCacheLock.lock();
         try {
             if (cachedChannels != null && Instant.now().isBefore(channelsCacheExpiresAt)) {
                 return cachedChannels;
+            }
+            long count = channelRepository.count();
+            // 数据库为空 → 未同步过 → 立即执行同步
+            if (count == 0 && !appKey.isEmpty()) {
+                log.info("数据库通道为空，自动触发萤石云同步...");
+                try { syncDevices(); } catch (Exception e) {
+                    log.warn("自动同步失败: {}", e.getMessage());
+                }
             }
             this.cachedChannels = channelRepository.findAll();
             this.channelsCacheExpiresAt = Instant.now().plusSeconds(5);

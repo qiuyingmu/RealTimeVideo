@@ -115,13 +115,16 @@ function checkNetworkQuality() {
 }
 
 const playUrl = computed(() => {
-  // 优先使用后端 Channel.getEzvizPlayUrl() 生成的正确URL
-  // （会根据ipcSerial vs deviceSerial自动选择正确格式）
+  // 优先使用后端生成的正确URL
   if (props.channel.ezvizPlayUrl) {
     return props.channel.ezvizPlayUrl
   }
-  // 降级：手动构建
-  return `ezopen://open.ys7.com/${props.channel.deviceSerial}/${props.channel.channelNo}.sd.live`
+  // 降级：手动构建，IPC 通道用 ipcSerial
+  const serial = props.channel.ipcSerial && props.channel.ipcSerial !== props.channel.deviceSerial
+    ? props.channel.ipcSerial : props.channel.deviceSerial
+  const ch = props.channel.ipcSerial && props.channel.ipcSerial !== props.channel.deviceSerial
+    ? 1 : props.channel.channelNo
+  return `ezopen://open.ys7.com/${serial}/${ch}.sd.live`
 })
 
 const loadMessage = computed(() => {
