@@ -771,17 +771,51 @@ async function syncFromEzviz() {
 
   .video-container {
     padding: 0;
-    /* 移动端视频取视口高度减去头部，避免过高留白 */
-    min-height: 35vh;
-    max-height: 55vh;
+    /* 移动端视频尽量占满可用空间 */
+    min-height: 40vh;
+    max-height: 60vh;
   }
 
-  /* 横屏模式：最大化视频区域 */
+  /* 小屏手机：视频最大化 */
+  @media (max-height: 700px) {
+    .video-container {
+      min-height: 50vh;
+      max-height: 70vh;
+    }
+  }
+
+  /* 横屏模式：视频占满全屏 */
   @media (max-height: 500px) and (orientation: landscape) {
     .video-container {
-      min-height: calc(100vh - 56px - 40px);
+      min-height: calc(100vh - 56px - 40px - 36px);
       max-height: none;
     }
+    .video-header {
+      padding: 4px 12px;
+    }
+    .video-title strong {
+      font-size: 13px;
+    }
+    .video-status {
+      font-size: 11px;
+    }
+  }
+
+  /* 设备列表按钮增大触摸区域 */
+  .tree-channel {
+    padding: 12px 12px 12px 32px;
+    min-height: 44px;
+  }
+
+  .tree-group-header {
+    padding: 14px 12px;
+    min-height: 44px;
+  }
+
+  .btn-sidebar-toggle {
+    min-width: 44px;
+    min-height: 44px;
+    justify-content: center;
   }
 
   .video-status {
@@ -800,19 +834,6 @@ async function syncFromEzviz() {
   .welcome-screen p {
     font-size: 13px;
     text-align: center;
-  }
-
-  /* 设备树调整 */
-  .tree-channel {
-    padding: 10px 12px 10px 32px;
-  }
-
-  .tree-group-header {
-    padding: 12px 12px;
-  }
-
-  .group-name {
-    font-size: 14px;
   }
 }
 </style>

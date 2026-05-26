@@ -685,25 +685,38 @@ function formatTime(timeStr) {
 
 /* 移动端适配 */
 @media (max-width: 768px) {
-  .admin-page { padding: 16px; }
+  .admin-page { padding: 12px; }
 
   .admin-header { flex-direction: column; gap: 12px; align-items: flex-start; }
+  .admin-header h1 { font-size: 18px; }
 
   .user-table { font-size: 12px; }
-  .user-table th, .user-table td { padding: 8px 8px; }
+  .user-table th, .user-table td { padding: 10px 8px; }
   .user-table td:nth-child(5), .user-table th:nth-child(5) { display: none; } /* 隐藏最后登录时间 */
   .user-table td:nth-child(6), .user-table th:nth-child(6) { display: none; } /* 隐藏失败次数 */
 
-  .action-btn { font-size: 11px; padding: 4px 8px; }
-  .table-wrap { margin: 0 -16px; border-radius: 0; }
+  .action-btn { font-size: 12px; padding: 8px 10px; min-width: 36px; min-height: 36px; }
+  .btn-add { padding: 10px 16px; font-size: 14px; }
+  .table-wrap { margin: 0 -12px; border-radius: 0; overflow-x: auto; }
 
-  /* 弹窗全屏 */
-  .modal-overlay { align-items: flex-end; }
+  /* 弹窗全屏 + 触摸友好 */
+  .modal-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
   .modal-content {
     max-width: 100%;
     border-radius: 16px 16px 0 0;
     margin-top: auto;
-    max-height: 80vh;
+    max-height: 85vh;
+    width: 100%;
   }
+  .modal-header { padding: 16px 20px; }
+  .modal-header h2 { font-size: 16px; }
+  .btn-close { padding: 8px; }
+  .user-form { padding: 20px; gap: 14px; }
+  .form-group input, .form-group select { padding: 12px 14px; font-size: 16px; }
+  .toggle-pwd { padding: 10px; }
+  .btn-cancel, .btn-submit { padding: 12px 20px; font-size: 15px; min-height: 44px; }
 }
 </style>

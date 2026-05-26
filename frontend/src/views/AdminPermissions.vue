@@ -477,8 +477,16 @@ onMounted(() => {
 
 /* 移动端 */
 @media (max-width: 768px) {
-  .permissions-page { padding: 16px; height: calc(100vh - 56px); }
-  .permissions-layout { flex-direction: column; }
-  .user-panel { width: 100%; min-width: 0; max-height: 200px; }
+  .permissions-page { padding: 12px; height: calc(100vh - 56px); }
+  .permissions-layout { flex-direction: column; gap: 12px; }
+  .user-panel { width: 100%; min-width: 0; max-height: 180px; }
+
+  .user-card { padding: 12px; min-height: 48px; }
+
+  .device-checkbox { padding: 14px 12px; min-height: 48px; }
+  .device-checkbox input[type="checkbox"] { width: 22px; height: 22px; }
+
+  .panel-actions { gap: 12px; }
+  .btn-select-all, .btn-save { padding: 10px 20px; font-size: 14px; min-height: 44px; }
 }
 </style>

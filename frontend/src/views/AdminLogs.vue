@@ -270,12 +270,24 @@ onMounted(() => loadLogs(1))
 
 /* 移动端 */
 @media (max-width: 768px) {
-  .logs-page { padding: 16px; }
-  .filters { flex-direction: column; align-items: stretch; }
+  .logs-page { padding: 12px; }
+  .filters { flex-direction: column; align-items: stretch; gap: 8px; }
+  .filters select, .filters input { padding: 10px 12px; font-size: 14px; }
   .log-count { margin-left: 0; }
-  .log-table { font-size: 12px; }
+
+  /* 表格可横向滚动 */
+  .log-list { overflow-x: auto; }
+  .log-table { font-size: 12px; min-width: 600px; }
   .log-table th, .log-table td { padding: 8px 10px; }
   .cell-detail { display: none; }
   .col-detail { display: none; }
+  .cell-ip { display: none; }
+
+  /* 分页按钮增大触摸区域 */
+  .pagination button {
+    padding: 10px 20px;
+    font-size: 14px;
+    min-width: 80px;
+  }
 }
 </style>
