@@ -2,14 +2,9 @@
   <div class="login-page">
     <div class="login-container">
       <div class="login-header">
-        <svg class="login-logo" viewBox="0 0 64 64" width="64" height="64">
-          <rect width="64" height="64" rx="14" fill="var(--primary)"/>
-          <circle cx="32" cy="26" r="10" fill="none" stroke="white" stroke-width="3"/>
-          <path d="M23 36l-4 12h26l-4-12" fill="none" stroke="white" stroke-width="3"/>
-          <circle cx="32" cy="26" r="3" fill="white"/>
-        </svg>
-        <h1 class="login-title">实时视频监控平台</h1>
-        <p class="login-subtitle">萤石云设备实时查看</p>
+        <img src="/logo.svg" class="login-logo" alt="logo" />
+        <h1 class="login-title">贵州建工监理咨询有限公司</h1>
+        <p class="login-subtitle">视频监控管理平台</p>
       </div>
 
       <form class="login-form" @submit.prevent="handleLogin" autocomplete="off">
@@ -92,7 +87,7 @@
       </form>
 
       <div class="login-footer">
-        <p>© 2024 实时视频监控平台</p>
+        <p>© 2026 贵州建工监理咨询有限公司</p>
       </div>
     </div>
   </div>
@@ -168,6 +163,8 @@ async function handleLogin() {
 }
 
 .login-logo {
+  width: 64px;
+  height: 64px;
   margin-bottom: 16px;
 }
 

@@ -4,13 +4,8 @@
     <nav v-if="authStore.isAuthenticated" class="navbar">
       <div class="navbar-left">
         <router-link to="/" class="navbar-brand">
-          <svg class="brand-icon" viewBox="0 0 64 64" width="32" height="32">
-            <rect width="64" height="64" rx="12" fill="var(--primary)"/>
-            <circle cx="32" cy="28" r="10" fill="none" stroke="white" stroke-width="3"/>
-            <path d="M24 38l-4 10h24l-4-10" fill="none" stroke="white" stroke-width="3"/>
-            <circle cx="32" cy="28" r="3" fill="white"/>
-          </svg>
-          <span class="brand-text">实时视频监控</span>
+          <img src="/logo.svg" class="brand-icon" alt="logo" />
+          <span class="brand-text">视频监控平台</span>
         </router-link>
       </div>
       <div class="navbar-right">
@@ -77,6 +72,11 @@ function handleLogout() {
   gap: 10px;
   text-decoration: none;
   color: var(--text);
+}
+
+.brand-icon {
+  height: 32px;
+  width: auto;
 }
 
 .brand-text {
@@ -174,7 +174,7 @@ main.with-nav {
   }
 
   .brand-icon {
-    width: 26px;
+    width: auto;
     height: 26px;
   }
 
