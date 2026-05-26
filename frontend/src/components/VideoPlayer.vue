@@ -114,9 +114,15 @@ function checkNetworkQuality() {
     .catch(() => { networkQuality.value = 'poor' })
 }
 
-const playUrl = computed(() =>
-  `ezopen://open.ys7.com/${props.channel.deviceSerial}/${props.channel.channelNo}.sd.live`
-)
+const playUrl = computed(() => {
+  // 优先使用后端 Channel.getEzvizPlayUrl() 生成的正确URL
+  // （会根据ipcSerial vs deviceSerial自动选择正确格式）
+  if (props.channel.ezvizPlayUrl) {
+    return props.channel.ezvizPlayUrl
+  }
+  // 降级：手动构建
+  return `ezopen://open.ys7.com/${props.channel.deviceSerial}/${props.channel.channelNo}.sd.live`
+})
 
 const loadMessage = computed(() => {
   const msgs = { 0: '准备中...', 1: '获取凭证...', 2: '连接服务器...', 3: '加载视频流...' }

@@ -36,6 +36,10 @@ public class Channel {
     @Column(name = "device_serial", nullable = false, length = 100)
     private String deviceSerial;
 
+    /** IPC 序列号（与设备序列号不同时，表示NVR通道下的独立IPC） */
+    @Column(name = "ipc_serial", length = 100)
+    private String ipcSerial;
+
     /** 通道号（从1开始，如1,2,3,4） */
     @Column(name = "channel_no", nullable = false)
     private Integer channelNo;
@@ -86,9 +90,13 @@ public class Channel {
 
     /**
      * 生成萤石云播放地址
-     * 格式: ezopen://open.ys7.com/{deviceSerial}/{channelNo}.hd.live
+     *
+     * NVR 通道使用设备序列号: ezopen://open.ys7.com/{deviceSerial}/{channelNo}.sd.live
+     * IPC 直连使用 IPC 序列号:  ezopen://open.ys7.com/{ipcSerial}/1.sd.live
      */
     public String getEzvizPlayUrl() {
-        return String.format("ezopen://open.ys7.com/%s/%d.hd.live", deviceSerial, channelNo);
+        String serial = (ipcSerial != null && !ipcSerial.equals(deviceSerial)) ? ipcSerial : deviceSerial;
+        int ch = (ipcSerial != null && !ipcSerial.equals(deviceSerial)) ? 1 : channelNo;
+        return String.format("ezopen://open.ys7.com/%s/%d.sd.live", serial, ch);
     }
 }

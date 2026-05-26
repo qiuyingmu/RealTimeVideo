@@ -278,6 +278,7 @@ public class EzvizService {
 
                 channels.add(Channel.builder()
                         .deviceSerial(deviceSerial)
+                        .ipcSerial((String) cam.get("ipcSerial"))
                         .deviceName(deviceName)
                         .channelNo(channelNo)
                         .channelName((String) cam.get("channelName"))
