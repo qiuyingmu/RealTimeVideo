@@ -75,8 +75,8 @@
     </div>
 
     <!-- ====== 移动端 - 频道切换 + 当前通道指示 ======
-         EZUIKit mobileLive 模板自带底部工具栏（PTZ/全屏/画质等），
-         我们只补充 EZUIKit 不提供的「上一个/下一个通道」导航按钮和当前通道指示。 -->
+         EZUIKit mobileLive 模板自带底部工具栏（全屏/画质等），
+         我们只补充 EZUIKit 不提供的「上一个/下一个通道」导航按钮、当前通道指示和自定义 PTZ 面板。 -->
     <div v-if="initialized && isMobile && !isSwitchingChannel" class="mobile-nav-overlay">
       <div v-if="showMobileControls" class="mobile-channel-info">
         <span class="mobile-channel-name">{{ props.channel.channelName || ('通道' + props.channel.channelNo) }}</span>
@@ -88,7 +88,57 @@
       <button v-if="showMobileControls" class="mobile-nav-btn mobile-nav-right" @click.stop="emitNextChannel" aria-label="下一个通道">
         <svg viewBox="0 0 24 24" width="22" height="22"><polyline points="9 6 15 12 9 18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
+
+      <!-- 自定义 PTZ 触发按钮（替代 EZUIKit 原生 PTZ，避免右侧弹出半屏面板） -->
+      <button v-if="showMobileControls" class="mobile-ptz-trigger" @click.stop="togglePtzPanel" aria-label="云台控制">
+        <svg viewBox="0 0 24 24" width="22" height="22">
+          <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/>
+          <line x1="12" y1="3" x2="12" y2="8" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+          <line x1="12" y1="16" x2="12" y2="21" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+          <line x1="3" y1="12" x2="8" y2="12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+          <line x1="16" y1="12" x2="21" y2="12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+        </svg>
+      </button>
     </div>
+
+    <!-- ====== 自定义底部 PTZ 控制面板（替代 EZUIKit 右侧弹出面板） ====== -->
+    <Transition name="ptz-slide">
+      <div v-if="ptzPanelOpen && isMobile" class="custom-ptz-panel" @click.stop>
+        <div class="ptz-panel-header">
+          <span class="ptz-panel-title">云台控制</span>
+          <button class="ptz-close-btn" @click="ptzPanelOpen = false" aria-label="关闭云台控制">
+            <svg viewBox="0 0 24 24" width="18" height="18">
+              <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </div>
+        <div class="ptz-panel-body">
+          <div class="ptz-dpad">
+            <!-- 上 -->
+            <button class="ptz-dir-btn ptz-up" @touchstart.prevent="startPtz(1)" @touchend.prevent="stopPtz" @mousedown.prevent="startPtz(1)" @mouseup="stopPtz" @mouseleave="stopPtz" aria-label="云台上转">
+              <svg viewBox="0 0 24 24" width="24" height="24"><polyline points="18 15 12 9 6 15" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <!-- 左 -->
+            <button class="ptz-dir-btn ptz-left" @touchstart.prevent="startPtz(3)" @touchend.prevent="stopPtz" @mousedown.prevent="startPtz(3)" @mouseup="stopPtz" @mouseleave="stopPtz" aria-label="云台左转">
+              <svg viewBox="0 0 24 24" width="24" height="24"><polyline points="15 18 9 12 15 6" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <!-- 中心 -->
+            <div class="ptz-center">
+              <svg viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="12" r="3" fill="currentColor" opacity="0.6"/></svg>
+            </div>
+            <!-- 右 -->
+            <button class="ptz-dir-btn ptz-right" @touchstart.prevent="startPtz(4)" @touchend.prevent="stopPtz" @mousedown.prevent="startPtz(4)" @mouseup="stopPtz" @mouseleave="stopPtz" aria-label="云台右转">
+              <svg viewBox="0 0 24 24" width="24" height="24"><polyline points="9 18 15 12 9 6" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <!-- 下 -->
+            <button class="ptz-dir-btn ptz-down" @touchstart.prevent="startPtz(2)" @touchend.prevent="stopPtz" @mousedown.prevent="startPtz(2)" @mouseup="stopPtz" @mouseleave="stopPtz" aria-label="云台下转">
+              <svg viewBox="0 0 24 24" width="24" height="24"><polyline points="6 9 12 15 18 9" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -120,10 +170,14 @@ const isSwitchingChannel = ref(false)
 const networkQuality = ref('good')
 const isFullscreen = ref(false)
 const showMobileControls = ref(false)
-const isMobile = ref(false)
+// isMobile 初始检测，配合 resize 事件保持同步
+const isMobile = ref(window.innerWidth <= 768 || 'ontouchstart' in window)
+const ptzPanelOpen = ref(false)
 
-// 缩放模式：0=拉伸填充, 1=等比缩放(含黑边), 2=裁剪填充（移动端默认裁剪填充，铺满全屏且不变形）
-const scaleMode = ref(parseInt(localStorage.getItem('mobileScaleMode') || '2'))
+// 缩放模式：0=拉伸填充, 1=等比缩放(含黑边), 2=裁剪填充
+// PC 端默认 0（拉伸填充，不截断画面），移动端默认 2（裁剪填充，铺满全屏不变形）
+const defaultScaleMode = isMobile.value ? 2 : 0
+const scaleMode = ref(parseInt(localStorage.getItem('scaleMode') || String(defaultScaleMode)))
 
 const SCALE_MODES = ['fill', 'fit', 'cover']
 const scaleModeLabel = computed(() => ({
@@ -140,6 +194,7 @@ let controlsHideTimer = null
 let touchStartX = 0
 let touchStartY = 0
 let latestChannelId = '' // 用于判断 channel 是否真正变化
+let channelSwitchGen = 0  // 通道切换世代计数器，防止竞态
 
 const CONNECT_TIMEOUT = 30000
 const RETRY_BASE_DELAY = 1000
@@ -248,10 +303,10 @@ function createPlayer() {
       { value: 'fluent', name: '流畅' }
     ],
     mobileExtendOptions: {
-      controls: ['ptzControl', 'fullScreen', 'hdSwitch'],
+      controls: ['fullScreen', 'hdSwitch'],   // 移除原生 ptzControl，使用自建底部 PTZ 面板
       showClose: false,
       showBack: false,
-      showPTZ: false,             // 默认不打开PTZ面板，用户点击底部PTZ按钮才弹出
+      showPTZ: false,
     },
     handleSuccess: () => {
       clearLoadTimeout()
@@ -399,10 +454,29 @@ function toggleControls() {
   }
 }
 
+// ====== PTZ 云台控制 ======
+function togglePtzPanel() {
+  ptzPanelOpen.value = !ptzPanelOpen.value
+}
+
+function startPtz(direction) {
+  if (playerInstance && typeof playerInstance.startPTZ === 'function') {
+    try { playerInstance.startPTZ({ direction, speed: 1 }) }
+    catch (e) { console.warn('PTZ start failed:', e) }
+  }
+}
+
+function stopPtz() {
+  if (playerInstance && typeof playerInstance.stopPTZ === 'function') {
+    try { playerInstance.stopPTZ() }
+    catch (e) { console.warn('PTZ stop failed:', e) }
+  }
+}
+
 // ====== 缩放模式循环切换（0→1→2→0） ======
 function cycleScaleMode() {
   scaleMode.value = (scaleMode.value + 1) % 3  // 0→1→2→0
-  localStorage.setItem('mobileScaleMode', String(scaleMode.value))
+  localStorage.setItem('scaleMode', String(scaleMode.value))
   // 通知播放器实例更新缩放模式
   if (playerInstance && typeof playerInstance.setScaleMode === 'function') {
     playerInstance.setScaleMode(scaleMode.value)
@@ -417,6 +491,11 @@ function emitPrevChannel() {
 function emitNextChannel() {
   emit('next-channel')
   showControlsTemporarily()
+}
+
+// ====== 响应式检测移动端 ======
+function updateIsMobile() {
+  isMobile.value = window.innerWidth <= 768 || 'ontouchstart' in window
 }
 
 // ====== 手势控制 ======
@@ -467,9 +546,15 @@ watch(() => props.channel, (newChannel, oldChannel) => {
 
   // 优雅切换：先标记切换状态（显示过渡覆盖层），再重建播放器
   isSwitchingChannel.value = true
+  // 关闭 PTZ 面板（切换通道时自动收起）
+  ptzPanelOpen.value = false
+
+  // 使用世代计数器防止竞态：如果多次快速切换，只有最新的一次生效
+  const myGen = ++channelSwitchGen
 
   // 短暂延迟确保 DOM 更新覆盖层后再销毁播放器
   setTimeout(() => {
+    if (myGen !== channelSwitchGen) return // 已过期，忽略
     destroyPlayerInstance()
     initPlayer()
   }, 50)
@@ -477,7 +562,9 @@ watch(() => props.channel, (newChannel, oldChannel) => {
 
 // ====== 生命周期 ======
 onMounted(() => {
-  isMobile.value = window.innerWidth <= 768
+  updateIsMobile()
+  // 窗口尺寸变化时同步 isMobile 状态（影响频道导航按钮显示）
+  window.addEventListener('resize', updateIsMobile)
 
   initPlayer()
   networkMonitor = setInterval(checkNetworkQuality, 30000)
@@ -501,6 +588,7 @@ onUnmounted(() => {
   document.removeEventListener('webkitfullscreenchange', onFullscreenChange)
   window.removeEventListener('orientationchange', checkOrientation)
   window.removeEventListener('resize', checkOrientation)
+  window.removeEventListener('resize', updateIsMobile)
 })
 </script>
 
@@ -670,18 +758,7 @@ onUnmounted(() => {
   max-width: 100%;
 }
 
-/* ====== EZUIKit 移动端 PTZ 控件尺寸优化 ====== */
-:deep(.ezui-ptz-control) {
-  max-height: 180px !important;
-  overflow: hidden !important;
-}
-
-:deep(.ezui-ptz-panel) {
-  max-height: 180px !important;
-  transform: scale(0.85) !important;
-  transform-origin: bottom center !important;
-}
-
+/* ====== EZUIKit 移动端控件尺寸优化（保留但不缩放原生 PTZ 面板） ====== */
 :deep(.ezui-mobile-controls .ezui-control-btn) {
   min-width: 36px !important;
   min-height: 36px !important;
@@ -690,6 +767,152 @@ onUnmounted(() => {
 :deep(.ezui-mobile-controls .ezui-control-btn svg) {
   width: 20px !important;
   height: 20px !important;
+}
+
+/* ====== 自定义 PTZ 触发按钮 ====== */
+.mobile-ptz-trigger {
+  position: absolute;
+  bottom: 80px;
+  right: 12px;
+  z-index: 40;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1.5px solid rgba(255, 255, 255, 0.15);
+  border-radius: 50%;
+  color: #fff;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: all 0.2s;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+}
+
+.mobile-ptz-trigger:active {
+  background: rgba(59, 130, 246, 0.5);
+  border-color: rgba(59, 130, 246, 0.5);
+  transform: scale(0.92);
+}
+
+/* ====== 自定义底部 PTZ 控制面板 ====== */
+.custom-ptz-panel {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  background: rgba(15, 15, 26, 0.92);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px 16px 0 0;
+  padding: 16px 20px calc(16px + env(safe-area-inset-bottom, 0));
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.ptz-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.ptz-panel-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.3px;
+}
+
+.ptz-close-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 50%;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.ptz-close-btn:active {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+.ptz-panel-body {
+  display: flex;
+  justify-content: center;
+}
+
+.ptz-dpad {
+  display: grid;
+  grid-template-columns: 56px 56px 56px;
+  grid-template-rows: 56px 56px 56px;
+  gap: 4px;
+  justify-items: center;
+  align-items: center;
+}
+
+.ptz-dir-btn {
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  color: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  transition: all 0.15s;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  touch-action: none;
+}
+
+.ptz-dir-btn:active {
+  background: rgba(59, 130, 246, 0.4);
+  border-color: rgba(59, 130, 246, 0.5);
+  transform: scale(0.92);
+}
+
+.ptz-up { grid-column: 2; grid-row: 1; }
+.ptz-left { grid-column: 1; grid-row: 2; }
+.ptz-center {
+  grid-column: 2;
+  grid-row: 2;
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+}
+.ptz-right { grid-column: 3; grid-row: 2; }
+.ptz-down { grid-column: 2; grid-row: 3; }
+
+/* PTZ 面板滑入/滑出动画 */
+.ptz-slide-enter-active,
+.ptz-slide-leave-active {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
+}
+.ptz-slide-enter-from {
+  transform: translateY(100%);
+  opacity: 0;
+}
+.ptz-slide-leave-to {
+  transform: translateY(100%);
+  opacity: 0;
 }
 
 /* ====== 移动端适配 ====== */
