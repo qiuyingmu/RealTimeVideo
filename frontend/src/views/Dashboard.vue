@@ -666,6 +666,8 @@ async function syncFromEzviz() {
   padding: 0;
   min-height: 0;
   background: #000;
+  /* 桌面端保持合理最小高度 */
+  min-height: 400px;
 }
 
 /* 欢迎页 */
@@ -769,6 +771,17 @@ async function syncFromEzviz() {
 
   .video-container {
     padding: 0;
+    /* 移动端视频取视口高度减去头部，避免过高留白 */
+    min-height: 35vh;
+    max-height: 55vh;
+  }
+
+  /* 横屏模式：最大化视频区域 */
+  @media (max-height: 500px) and (orientation: landscape) {
+    .video-container {
+      min-height: calc(100vh - 56px - 40px);
+      max-height: none;
+    }
   }
 
   .video-status {

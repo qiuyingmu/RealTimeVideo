@@ -189,6 +189,12 @@ function createPlayer() {
     audio: 0,                       // 默认静音（浏览器自动播放策略）
     width: '100%',
     height: '100%',
+    // 移动端扩展选项
+    mobileExtendOptions: {
+      controls: ['ptz', 'rec', 'date'],  // 移动端控件
+    },
+    // 画质列表（取第一个可用）
+    videoLevelList: null,
     handleSuccess: () => {
       clearLoadTimeout()
       initialized.value = true; loading.value = false; retryCount.value = 0
@@ -262,9 +268,22 @@ onUnmounted(() => {
   background: #0f0f1a;
   border-radius: 8px;
   overflow: hidden;
+  /* 防止子元素溢出导致滚动 */
+  contain: layout size style;
 }
 .ezuikit-player {
   width: 100%; height: 100%; min-height: 300px;
+}
+
+/* ====== 全屏模式 ====== */
+:fullscreen .video-player-wrapper,
+:-webkit-full-screen .video-player-wrapper {
+  border-radius: 0;
+  background: #000;
+}
+:fullscreen .ezuikit-player,
+:-webkit-full-screen .ezuikit-player {
+  min-height: 100vh;
 }
 
 /* ====== 加载 / 错误 / 重试 覆盖层 ====== */
@@ -342,11 +361,38 @@ onUnmounted(() => {
 
 /* ====== 移动端适配 ====== */
 @media (max-width: 768px) {
-  .video-player-wrapper { border-radius: 0; }
-  .ezuikit-player { min-height: 200px; }
+  .video-player-wrapper {
+    border-radius: 0;
+    /* 移动端视频优先占满视口宽度 */
+    touch-action: manipulation;
+    -webkit-touch-callout: none;
+  }
+  .ezuikit-player {
+    min-height: 240px;
+    /* 竖屏时固定宽高比，横屏时最大化 */
+    aspect-ratio: 16 / 9;
+  }
   .loading-text { font-size: 12px; }
   .network-indicator { top: 6px; right: 6px; padding: 3px 8px; font-size: 9px; }
   .btn-retry { padding: 8px 20px; font-size: 13px; }
+}
+
+/* 小屏手机（< 400px） */
+@media (max-width: 400px) {
+  .ezuikit-player {
+    min-height: 200px;
+  }
+}
+
+/* 横屏模式 */
+@media (max-height: 500px) and (orientation: landscape) {
+  .video-player-wrapper {
+    height: 100vh;
+  }
+  .ezuikit-player {
+    min-height: 100%;
+    aspect-ratio: auto;
+  }
 }
 
 @keyframes spin { to { transform: rotate(360deg); } }
