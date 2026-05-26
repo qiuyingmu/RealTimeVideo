@@ -74,10 +74,14 @@
       <span class="ni-label">{{ networkLabel }}</span>
     </div>
 
-    <!-- ====== 移动端 - 仅保留频道切换按钮 ======
+    <!-- ====== 移动端 - 频道切换 + 当前通道指示 ======
          EZUIKit mobileLive 模板自带底部工具栏（PTZ/全屏/画质等），
-         我们只补充 EZUIKit 不提供的「上一个/下一个通道」导航按钮。 -->
+         我们只补充 EZUIKit 不提供的「上一个/下一个通道」导航按钮和当前通道指示。 -->
     <div v-if="initialized && isMobile && !isSwitchingChannel" class="mobile-nav-overlay">
+      <div v-if="showMobileControls" class="mobile-channel-info">
+        <span class="mobile-channel-name">{{ props.channel.channelName || ('通道' + props.channel.channelNo) }}</span>
+        <span class="mobile-channel-device">{{ props.channel.deviceName || props.channel.deviceSerial }} · CH{{ props.channel.channelNo }}</span>
+      </div>
       <button v-if="showMobileControls" class="mobile-nav-btn mobile-nav-left" @click.stop="emitPrevChannel" aria-label="上一个通道">
         <svg viewBox="0 0 24 24" width="22" height="22"><polyline points="15 18 9 12 15 6" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
@@ -238,7 +242,11 @@ function createPlayer() {
     height: '100%',
     // 从用户偏好读取画质（默认高清）
     videoLevel: localStorage.getItem('videoQuality') || 'hd',
-    videoLevelList: ['hd', 'sd', 'fluent'],
+    videoLevelList: [
+      { value: 'hd', name: '高清' },
+      { value: 'sd', name: '标清' },
+      { value: 'fluent', name: '流畅' }
+    ],
     mobileExtendOptions: {
       controls: ['ptzControl', 'fullScreen', 'hdSwitch'],
       showClose: false,
@@ -621,6 +629,70 @@ onUnmounted(() => {
 }
 .mobile-nav-left { left: 6px; }
 .mobile-nav-right { right: 6px; }
+
+/* 移动端通道信息指示 */
+.mobile-channel-info {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 32;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 16px;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.1);
+  pointer-events: none;
+  max-width: 70%;
+}
+
+.mobile-channel-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.mobile-channel-device {
+  font-size: 10px;
+  color: rgba(255,255,255,0.6);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+/* ====== EZUIKit 移动端 PTZ 控件尺寸优化 ====== */
+:deep(.ezui-ptz-control),
+:deep([class*="ptz"]),
+:deep([class*="PTZ"]) {
+  max-height: 180px !important;
+  overflow: hidden !important;
+}
+
+:deep(.ezui-ptz-panel) {
+  max-height: 180px !important;
+  transform: scale(0.85) !important;
+  transform-origin: bottom center !important;
+}
+
+:deep(.ezui-mobile-controls .ezui-control-btn) {
+  min-width: 36px !important;
+  min-height: 36px !important;
+}
+
+:deep(.ezui-mobile-controls .ezui-control-btn svg) {
+  width: 20px !important;
+  height: 20px !important;
+}
 
 /* ====== 移动端适配 ====== */
 @media (max-width: 768px) {

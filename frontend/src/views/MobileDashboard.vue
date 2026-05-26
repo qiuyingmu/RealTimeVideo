@@ -6,7 +6,13 @@
         <circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/>
         <line x1="16.5" y1="16.5" x2="21" y2="21" stroke="currentColor" stroke-width="2"/>
       </svg>
-      <input v-model="searchQuery" placeholder="搜索通道名称..." class="search-input" />
+      <input v-model="searchQuery" placeholder="搜索设备或通道..." class="search-input" />
+      <button v-if="searchQuery" class="search-clear" @click="searchQuery = ''">
+        <svg viewBox="0 0 24 24" width="16" height="16">
+          <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
     </div>
 
     <!-- 加载状态 -->
@@ -15,40 +21,57 @@
       <p>加载中...</p>
     </div>
 
-    <!-- 设备卡片列表 -->
+    <!-- 设备分组列表 -->
     <div v-else class="device-scroll">
-      <template v-if="allChannelList.length > 0">
+      <template v-if="filteredGroups.length > 0">
         <div
-          v-for="ch in allChannelList"
-          :key="ch.deviceSerial + '-' + ch.channelNo"
-          class="channel-card"
-          :class="{ offline: ch.status !== 'online' }"
-          @click="selectAndPlay(ch)"
+          v-for="group in filteredGroups"
+          :key="group.deviceSerial"
+          class="device-group"
         >
-          <div class="card-preview">
-            <div class="preview-placeholder">
-              <svg viewBox="0 0 24 24" width="32" height="32">
-                <rect x="2" y="4" width="20" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/>
-                <polygon points="10,8 16,11 10,14" fill="currentColor"/>
+          <!-- 设备头部 -->
+          <div class="device-group-header" @click="group.expanded = !group.expanded">
+            <svg
+              class="group-arrow"
+              :class="{ expanded: group.expanded }"
+              viewBox="0 0 24 24"
+              width="18" height="18"
+            >
+              <polyline points="9 18 15 12 9 6" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <div class="group-device-info">
+              <span class="group-device-name">{{ group.deviceName }}</span>
+              <span class="group-device-serial">{{ group.deviceSerial }}</span>
+            </div>
+            <span class="group-badge" :class="group.hasOnline ? 'online' : 'offline'">
+              {{ group.channels.length }}通道
+            </span>
+            <span class="group-status-text" :class="group.hasOnline ? 'online' : 'offline'">
+              {{ group.hasOnline ? '在线' : '离线' }}
+            </span>
+          </div>
+
+          <!-- 通道列表 -->
+          <div v-show="group.expanded" class="group-channels">
+            <div
+              v-for="ch in group.channels"
+              :key="ch.deviceSerial + '-' + ch.channelNo"
+              class="channel-item"
+              :class="{ 'channel-offline': ch.status !== 'online' }"
+              @click="selectAndPlay(ch)"
+            >
+              <span class="ch-status-dot" :class="ch.status"></span>
+              <div class="ch-info">
+                <span class="ch-name">{{ ch.channelName || '通道' + ch.channelNo }}</span>
+                <span class="ch-meta">CH{{ ch.channelNo }}</span>
+              </div>
+              <span class="ch-status-label" :class="ch.status">
+                {{ ch.status === 'online' ? '在线' : '离线' }}
+              </span>
+              <svg viewBox="0 0 24 24" width="16" height="16" class="ch-chevron">
+                <polyline points="9 18 15 12 9 6" fill="none" stroke="currentColor" stroke-width="2"/>
               </svg>
             </div>
-            <span class="status-dot" :class="ch.status"></span>
-          </div>
-          <div class="card-info">
-            <div class="card-name">
-              {{ ch.channelName || '通道' + ch.channelNo }}
-            </div>
-            <div class="card-meta">
-              {{ ch.deviceName || ch.deviceSerial }} · CH{{ ch.channelNo }}
-            </div>
-          </div>
-          <div class="card-status">
-            <span class="status-text" :class="ch.status">
-              {{ ch.status === 'online' ? '在线' : '离线' }}
-            </span>
-            <svg viewBox="0 0 24 24" width="16" height="16" class="chevron">
-              <polyline points="9 18 15 12 9 6" fill="none" stroke="currentColor" stroke-width="2"/>
-            </svg>
           </div>
         </div>
       </template>
@@ -60,8 +83,9 @@
           <circle cx="40" cy="32" r="7" fill="none" stroke="#cbd5e1" stroke-width="2"/>
           <polygon points="37,29 37,35 44,32" fill="#cbd5e1"/>
         </svg>
-        <p>暂无设备</p>
-        <p class="hint">请同步萤石云设备或联系管理员</p>
+        <p v-if="searchQuery">未找到匹配的设备或通道</p>
+        <p v-else>暂无设备</p>
+        <p class="hint" v-if="!searchQuery">请同步萤石云设备或联系管理员</p>
       </div>
     </div>
 
@@ -88,15 +112,53 @@ const loading = ref(true)
 const searchQuery = ref('')
 let refreshInterval = null
 
-// 所有通道扁平列表
-const allChannelList = computed(() => {
-  if (!searchQuery.value.trim()) return channels.value
+// 按设备分组（同 Dashboard.vue 逻辑）
+const deviceGroups = computed(() => {
+  const map = {}
+  for (const ch of channels.value) {
+    const serial = ch.deviceSerial
+    if (!map[serial]) {
+      map[serial] = {
+        deviceName: ch.deviceName || serial,
+        deviceSerial: serial,
+        expanded: true,
+        hasOnline: false,
+        channels: []
+      }
+    }
+    map[serial].channels.push(ch)
+    if (ch.status === 'online') map[serial].hasOnline = true
+  }
+  // 每个设备组内：在线通道排前面
+  for (const g of Object.values(map)) {
+    g.channels.sort((a, b) => {
+      if (a.status === 'online' && b.status !== 'online') return -1
+      if (a.status !== 'online' && b.status === 'online') return 1
+      return (a.channelName || '').localeCompare(b.channelName || '')
+    })
+  }
+  // 设备组之间：有在线通道的组排前面
+  return Object.values(map).sort((a, b) => {
+    if (a.hasOnline && !b.hasOnline) return -1
+    if (!a.hasOnline && b.hasOnline) return 1
+    return (a.deviceName || '').localeCompare(b.deviceName || '')
+  })
+})
+
+// 搜索过滤（同时搜索设备和通道名）
+const filteredGroups = computed(() => {
+  if (!searchQuery.value.trim()) return deviceGroups.value
   const q = searchQuery.value.toLowerCase()
-  return channels.value.filter(ch =>
-    (ch.channelName || '').toLowerCase().includes(q) ||
-    String(ch.channelNo).includes(q) ||
-    ch.deviceSerial.toLowerCase().includes(q)
-  )
+  return deviceGroups.value.map(g => ({
+    ...g,
+    expanded: true,
+    channels: g.channels.filter(ch =>
+      (ch.channelName || '').toLowerCase().includes(q) ||
+      String(ch.channelNo).includes(q) ||
+      ch.deviceSerial.toLowerCase().includes(q) ||
+      (ch.deviceName || '').toLowerCase().includes(q)
+    )
+  })).filter(g => g.channels.length > 0)
 })
 
 // 管理员快捷操作
@@ -236,6 +298,24 @@ onUnmounted(() => {
   color: #94a3b8;
 }
 
+.search-clear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  color: #94a3b8;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.search-clear:active {
+  background: #f1f5f9;
+}
+
 /* 加载状态 */
 .loading-state {
   display: flex;
@@ -268,122 +348,184 @@ onUnmounted(() => {
   -webkit-overflow-scrolling: touch;
 }
 
-/* 通道卡片 */
-.channel-card {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px;
-  margin-bottom: 8px;
+/* ====== 设备分组 ====== */
+.device-group {
+  margin-bottom: 10px;
   background: #fff;
   border-radius: 12px;
   border: 1px solid #e2e8f0;
-  cursor: pointer;
-  transition: all 0.2s;
-  -webkit-tap-highlight-color: transparent;
-  user-select: none;
-}
-
-.channel-card:active {
-  background: #f1f5f9;
-  transform: scale(0.98);
-}
-
-.channel-card.offline {
-  opacity: 0.65;
-}
-
-/* 预览缩略图 */
-.card-preview {
-  width: 56px;
-  height: 56px;
-  border-radius: 10px;
-  background: #1e293b;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  flex-shrink: 0;
   overflow: hidden;
 }
 
-.preview-placeholder {
-  color: rgba(255,255,255,0.3);
+/* 设备头部 */
+.device-group-header {
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 10px;
+  padding: 14px 14px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  transition: background 0.15s;
 }
 
-.status-dot {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  border: 2px solid #1e293b;
+.device-group-header:active {
+  background: #f8fafc;
 }
 
-.status-dot.online {
-  background: #22c55e;
+.group-arrow {
+  color: #94a3b8;
+  flex-shrink: 0;
+  transition: transform 0.2s;
 }
 
-.status-dot.offline {
-  background: #94a3b8;
+.group-arrow.expanded {
+  transform: rotate(90deg);
 }
 
-/* 卡片信息 */
-.card-info {
+.group-device-info {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
-.card-name {
+.group-device-name {
   font-size: 14px;
   font-weight: 600;
   color: #1a1a2e;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  margin-bottom: 2px;
 }
 
-.card-meta {
-  font-size: 12px;
-  color: #64748b;
+.group-device-serial {
+  font-size: 11px;
+  color: #94a3b8;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* 卡片右侧状态 */
-.card-status {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
+.group-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
   flex-shrink: 0;
 }
 
-.status-text {
-  font-size: 11px;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 6px;
+.group-badge.online {
+  background: #e8f5e9;
+  color: #2e7d32;
 }
 
-.status-text.online {
-  background: #dcfce7;
-  color: #166534;
-}
-
-.status-text.offline {
+.group-badge.offline {
   background: #f1f5f9;
   color: #94a3b8;
 }
 
-.chevron {
+.group-status-text {
+  font-size: 11px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.group-status-text.online {
+  color: #2e7d32;
+}
+
+.group-status-text.offline {
+  color: #94a3b8;
+}
+
+/* ====== 通道列表（设备下方） ====== */
+.group-channels {
+  border-top: 1px solid #f1f5f9;
+}
+
+.channel-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px 12px 18px;
+  cursor: pointer;
+  transition: background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  border-bottom: 1px solid #f8fafc;
+}
+
+.channel-item:last-child {
+  border-bottom: none;
+}
+
+.channel-item:active {
+  background: #f1f5f9;
+  transform: scale(0.98);
+}
+
+.channel-item.channel-offline {
+  opacity: 0.65;
+}
+
+.ch-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.ch-status-dot.online { background: #2e7d32; }
+.ch-status-dot.offline { background: #cbd5e1; }
+
+.ch-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ch-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1a2e;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ch-meta {
+  font-size: 11px;
+  color: #94a3b8;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ch-status-label {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.ch-status-label.online {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.ch-status-label.offline {
+  background: #f1f5f9;
+  color: #94a3b8;
+}
+
+.ch-chevron {
   color: #cbd5e1;
+  flex-shrink: 0;
 }
 
 /* 空状态 */

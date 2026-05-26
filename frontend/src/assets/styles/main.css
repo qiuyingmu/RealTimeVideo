@@ -153,6 +153,7 @@ html.dark .settings-section,
 html.dark .settings-item,
 html.dark .user-card,
 html.dark .channel-card,
+html.dark .device-group,
 html.dark .search-bar,
 html.dark .sidebar,
 html.dark .video-header,
@@ -177,13 +178,17 @@ html.dark .user-name,
 html.dark .settings-item-left,
 html.dark .sidebar-header h2,
 html.dark .video-title strong,
-html.dark .mobile-title {
+html.dark .mobile-title,
+html.dark .group-device-name,
+html.dark .ch-name {
   color: var(--text) !important;
 }
 
 html.dark .card-meta,
 html.dark .top-channel-meta,
-html.dark .search-input::placeholder {
+html.dark .search-input::placeholder,
+html.dark .group-device-serial,
+html.dark .ch-meta {
   color: var(--text-secondary) !important;
 }
 
@@ -220,6 +225,18 @@ html.dark .tree-group-header:hover {
 html.dark .ch-name {
   color: var(--text);
 }
+html.dark .device-group-header:active {
+  background: rgba(255,255,255,0.05);
+}
+html.dark .group-channels {
+  border-top-color: rgba(255,255,255,0.06);
+}
+html.dark .channel-item {
+  border-bottom-color: rgba(255,255,255,0.04);
+}
+html.dark .channel-item:active {
+  background: rgba(255,255,255,0.05);
+}
 html.dark .mobile-header,
 html.dark .mobile-tabbar {
   background: var(--bg-card) !important;
@@ -239,6 +256,9 @@ html.dark .action-btn {
 }
 html.dark .action-btn:active {
   background: rgba(255,255,255,0.05);
+}
+html.dark .search-clear:active {
+  background: rgba(255,255,255,0.1);
 }
 html.dark .logout-btn {
   background: var(--bg-card);

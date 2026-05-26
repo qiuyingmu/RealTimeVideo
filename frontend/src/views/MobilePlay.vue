@@ -47,7 +47,19 @@
           <span class="top-channel-name">{{ channelName }}</span>
           <span class="top-channel-meta">{{ channelMeta }}</span>
         </div>
-        <div class="top-spacer"></div>
+        <div class="top-channel-nav">
+          <button class="top-nav-btn" @click="prevChannel" :disabled="!hasPrev" aria-label="上一个通道">
+            <svg viewBox="0 0 24 24" width="20" height="20">
+              <polyline points="15 18 9 12 15 6" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <span class="top-nav-index">{{ currentIndex + 1 }}/{{ channels.length }}</span>
+          <button class="top-nav-btn" @click="nextChannel" :disabled="!hasNext" aria-label="下一个通道">
+            <svg viewBox="0 0 24 24" width="20" height="20">
+              <polyline points="9 6 15 12 9 18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
       </div>
 
       <!-- EZUIKit 底部控件由 mobileLive 模板 + mobileExtendOptions 原生提供
@@ -266,7 +278,11 @@ async function initPlayer() {
       width: '100%',
       height: '100%',
       videoLevel: localStorage.getItem('videoQuality') === 'sd' ? 'sd' : localStorage.getItem('videoQuality') === 'fluent' ? 'fluent' : 'hd',
-      videoLevelList: ['hd', 'sd', 'fluent'],
+      videoLevelList: [
+        { value: 'hd', name: '高清' },
+        { value: 'sd', name: '标清' },
+        { value: 'fluent', name: '流畅' }
+      ],
       mobileExtendOptions: {
         controls: ['ptzControl', 'fullScreen', 'hdSwitch'],
         showClose: false,
@@ -444,6 +460,39 @@ onUnmounted(() => {
   color: #e2e8f0;
 }
 
+/* ====== EZUIKit 移动端 PTZ 控件尺寸优化 ====== */
+:deep(.ezui-ptz-control),
+:deep([class*="ptz"]),
+:deep([class*="PTZ"]) {
+  max-height: 180px !important;
+  overflow: hidden !important;
+}
+
+:deep(.ezui-ptz-panel) {
+  max-height: 180px !important;
+  transform: scale(0.85) !important;
+  transform-origin: bottom center !important;
+}
+
+/* 确保通道信息始终可见 */
+:deep(.ezui-top-bar) {
+  z-index: 5 !important;
+}
+
+:deep(.ezui-mobile-controls) {
+  bottom: 0 !important;
+}
+
+:deep(.ezui-mobile-controls .ezui-control-btn) {
+  min-width: 36px !important;
+  min-height: 36px !important;
+}
+
+:deep(.ezui-mobile-controls .ezui-control-btn svg) {
+  width: 20px !important;
+  height: 20px !important;
+}
+
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
@@ -556,6 +605,47 @@ onUnmounted(() => {
 .top-spacer {
   width: 36px;
   flex-shrink: 0;
+}
+
+/* 顶部通道导航 */
+.top-channel-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  pointer-events: auto;              /* 按钮可点击 */
+  flex-shrink: 0;
+}
+
+.top-nav-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.15);
+  border: none;
+  border-radius: 50%;
+  color: #fff;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+
+.top-nav-btn:active {
+  background: rgba(255,255,255,0.3);
+}
+
+.top-nav-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.top-nav-index {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.8);
+  min-width: 36px;
+  text-align: center;
 }
 
 /* 底部控制栏 */
