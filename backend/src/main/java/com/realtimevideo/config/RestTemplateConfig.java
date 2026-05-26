@@ -20,10 +20,9 @@ public class RestTemplateConfig {
     public RestTemplate restTemplate(RestTemplateBuilder builder) {
         return builder
                 // 连接超时：5秒（萤石云 API 通常响应很快）
-                .connectTimeout(Duration.ofSeconds(5))
+                .setConnectTimeout(Duration.ofSeconds(5))
                 // 读取超时：10秒（获取设备列表等操作）
-                .readTimeout(Duration.ofSeconds(10))
-                // 连接池：最大连接数，允许并发请求
+                .setReadTimeout(Duration.ofSeconds(10))
                 .build();
     }
 }
