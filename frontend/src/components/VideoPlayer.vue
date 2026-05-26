@@ -115,16 +115,13 @@ function checkNetworkQuality() {
 }
 
 const playUrl = computed(() => {
-  // 优先使用后端生成的正确URL
-  if (props.channel.ezvizPlayUrl) {
-    return props.channel.ezvizPlayUrl
-  }
-  // 降级：手动构建，IPC 通道用 ipcSerial
-  const serial = props.channel.ipcSerial && props.channel.ipcSerial !== props.channel.deviceSerial
-    ? props.channel.ipcSerial : props.channel.deviceSerial
-  const ch = props.channel.ipcSerial && props.channel.ipcSerial !== props.channel.deviceSerial
-    ? 1 : props.channel.channelNo
-  return `ezopen://open.ys7.com/${serial}/${ch}.sd.live`
+  // 先用NVR通道号格式试试（萤石云官方模板使用此格式）
+  const url = `ezopen://open.ys7.com/${props.channel.deviceSerial}/${props.channel.channelNo}.sd.live`
+  console.log('[VideoPlayer] URL:', url,
+    '| deviceSerial:', props.channel.deviceSerial,
+    '| ipcSerial:', props.channel.ipcSerial,
+    '| chNo:', props.channel.channelNo)
+  return url
 })
 
 const loadMessage = computed(() => {
@@ -179,13 +176,10 @@ function createPlayer() {
     id: 'ezuikit-player',
     accessToken: currentToken,
     url: playUrl.value,
-    template: 'security',          // 安防模板：含全部操作控件
-    plugin: plugins,               // 对讲插件
-    audio: 1,                      // 默认开启音频
-    autoplay: true,                // 自动播放
+    template: 'live',               // 直播模板
+    autoplay: true,                 // 自动播放
     width: '100%',
     height: '100%',
-    videoBuffer: networkQuality.value === 'poor' ? 5 : networkQuality.value === 'fair' ? 3 : 2,
     handleSuccess: () => {
       clearLoadTimeout()
       initialized.value = true; loading.value = false; retryCount.value = 0
