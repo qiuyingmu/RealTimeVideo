@@ -140,8 +140,8 @@ const hasNext = computed(() => currentIndex.value >= 0 && currentIndex.value < c
 // 当前画质偏好
 const currentQuality = ref(localStorage.getItem('videoQuality') || 'hd')
 
-// 缩放模式：0=拉伸填充, 1=等比缩放(含黑边), 2=裁剪填充
-const scaleMode = ref(parseInt(localStorage.getItem('mobileScaleMode') || '0'))
+// 缩放模式：0=拉伸填充, 1=等比缩放(含黑边), 2=裁剪填充（移动端默认裁剪填充，铺满全屏且不变形）
+const scaleMode = ref(parseInt(localStorage.getItem('mobileScaleMode') || '2'))
 const SCALE_MODES = ['fill', 'fit', 'cover']
 const scaleModeLabel = computed(() => ({
   fill: '拉伸填充', fit: '等比缩放', cover: '裁剪填充'
@@ -297,6 +297,14 @@ async function initPlayer() {
       height: '100%',
       videoLevel: localStorage.getItem('videoQuality') === 'sd' ? 'sd' : localStorage.getItem('videoQuality') === 'fluent' ? 'fluent' : 'hd',
       videoLevelList: ['hd', 'sd', 'fluent'],
+      mobileExtendOptions: {
+        controls: [],
+        showClose: false,
+        showBack: false,
+        showPTZ: false,
+        showFocus: false,
+        showZoom: false,
+      },
       handleSuccess: () => {
         initialized.value = true
         isSwitchingChannel.value = false

@@ -140,8 +140,8 @@ const isFullscreen = ref(false)
 const showMobileControls = ref(false)
 const isMobile = ref(false)
 
-// 缩放模式：0=拉伸填充, 1=等比缩放(含黑边), 2=裁剪填充
-const scaleMode = ref(parseInt(localStorage.getItem('mobileScaleMode') || '0'))
+// 缩放模式：0=拉伸填充, 1=等比缩放(含黑边), 2=裁剪填充（移动端默认裁剪填充，铺满全屏且不变形）
+const scaleMode = ref(parseInt(localStorage.getItem('mobileScaleMode') || '2'))
 
 const SCALE_MODES = ['fill', 'fit', 'cover']
 const scaleModeLabel = computed(() => ({
@@ -262,9 +262,12 @@ function createPlayer() {
     videoLevel: localStorage.getItem('videoQuality') || 'hd',
     videoLevelList: ['hd', 'sd', 'fluent'],
     mobileExtendOptions: {
-      controls: ['ptz', 'rec', 'date'],
+      controls: [],
       showClose: false,
       showBack: false,
+      showPTZ: false,
+      showFocus: false,
+      showZoom: false,
     },
     handleSuccess: () => {
       clearLoadTimeout()
