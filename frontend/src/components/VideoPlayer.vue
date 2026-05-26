@@ -74,8 +74,13 @@
       <span class="ni-label">{{ networkLabel }}</span>
     </div>
 
-    <!-- ====== 移动端覆盖层控件 ====== -->
-    <div v-if="initialized && isMobile && !isSwitchingChannel" class="mobile-controls-overlay" @click="toggleControls">
+    <!-- ====== 移动端覆盖层控件 ======
+         注意：overlay 有 pointer-events: none，只对按钮开启 pointer-events: auto，
+         确保 EZUIKit 内置的云台控制/缩放等控件可以正常触摸。 -->
+    <div v-if="initialized && isMobile && !isSwitchingChannel" class="mobile-controls-overlay">
+      <!-- 透明中间区域点击 → 切换控制栏显隐 -->
+      <div class="mco-touch-zone" @click="toggleControls"></div>
+
       <!-- 切频道按钮（左侧） -->
       <button v-if="showMobileControls" class="mobile-nav-btn mobile-nav-left" @click.stop="emitPrevChannel" aria-label="上一个通道">
         <svg viewBox="0 0 24 24" width="22" height="22"><polyline points="15 18 9 12 15 6" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -92,6 +97,12 @@
           </svg>
           <svg v-else viewBox="0 0 24 24" width="20" height="20">
             <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+        <!-- 缩放模式切换 -->
+        <button class="mobile-bottom-btn" @click.stop="cycleScaleMode" aria-label="切换缩放模式" :title="scaleModeLabel">
+          <svg viewBox="0 0 24 24" width="20" height="20">
+            <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
           </svg>
         </button>
       </div>
@@ -128,6 +139,14 @@ const networkQuality = ref('good')
 const isFullscreen = ref(false)
 const showMobileControls = ref(false)
 const isMobile = ref(false)
+
+// 缩放模式：0=拉伸填充, 1=等比缩放(含黑边), 2=裁剪填充
+const scaleMode = ref(parseInt(localStorage.getItem('mobileScaleMode') || '0'))
+
+const SCALE_MODES = ['fill', 'fit', 'cover']
+const scaleModeLabel = computed(() => ({
+  fill: '拉伸填充', fit: '等比缩放', cover: '裁剪填充'
+}[SCALE_MODES[scaleMode.value]] || '拉伸填充'))
 
 const playerWrapperRef = ref(null)
 
@@ -168,12 +187,14 @@ function checkNetworkQuality() {
 
 // ====== 播放地址 ======
 const playUrl = computed(() => {
-  const url = `ezopen://open.ys7.com/${props.channel.deviceSerial}/${props.channel.channelNo}.hd.live`
+  const quality = localStorage.getItem('videoQuality') || 'hd'
+  const url = `ezopen://open.ys7.com/${props.channel.deviceSerial}/${props.channel.channelNo}.${quality}.live`
   if (import.meta.env.DEV) {
     console.log('[VideoPlayer] URL:',
-      `ezopen://open.ys7.com/${props.channel.deviceSerial}/${props.channel.channelNo}.hd.live`,
+      url,
       '| deviceSerial:', props.channel.deviceSerial,
-      '| chNo:', props.channel.channelNo)
+      '| chNo:', props.channel.channelNo,
+      '| quality:', quality)
   }
   return url
 })
@@ -233,7 +254,7 @@ function createPlayer() {
     template: playerTemplate,          // 根据设备自动选择模板
     autoplay: true,
     staticPath: '/ezuikit_cdn',
-    scaleMode: 1,                      // cover模式（填充全屏无黑边）
+    scaleMode: scaleMode.value,          // 从 localStorage 读取用户偏好的缩放模式
     audio: 0,
     width: '100%',
     height: '100%',
@@ -388,6 +409,16 @@ function toggleControls() {
     clearTimeout(controlsHideTimer)
   } else {
     showControlsTemporarily()
+  }
+}
+
+// ====== 缩放模式循环切换（0→1→2→0） ======
+function cycleScaleMode() {
+  scaleMode.value = (scaleMode.value + 1) % 3  // 0→1→2→0
+  localStorage.setItem('mobileScaleMode', String(scaleMode.value))
+  // 通知播放器实例更新缩放模式
+  if (playerInstance && typeof playerInstance.setScaleMode === 'function') {
+    playerInstance.setScaleMode(scaleMode.value)
   }
 }
 
@@ -586,10 +617,29 @@ onUnmounted(() => {
 .network-indicator.poor .ni-dot { background: #ef4444; box-shadow: 0 0 6px rgba(239, 68, 68, 0.5); }
 .network-indicator.poor .ni-label { color: #fca5a5; }
 
-/* ====== 移动端覆盖控件 ====== */
+/* ====== 移动端覆盖控件 ======
+   关键：overlay 本身 pointer-events: none 让触摸穿透到 EZUIKit 内置云台控件，
+   只对按钮和触摸区域开启 pointer-events: auto，确保可点击。 */
 .mobile-controls-overlay {
   position: absolute; inset: 0; z-index: 30;
   touch-action: none;
+  pointer-events: none;              /* 触摸穿透 → EZUIKit 云台控件可点 */
+}
+
+/* 触摸区域（不可见，仅用于点击切换控制栏显隐） */
+.mco-touch-zone {
+  position: absolute; inset: 0; z-index: 1;
+  pointer-events: auto;              /* 自己可接收点击 */
+}
+
+/* 所有按钮恢复点击事件 */
+.mobile-nav-btn,
+.mobile-bottom-btn {
+  pointer-events: auto;              /* 按钮可点击 */
+}
+
+.mobile-bottom-bar {
+  pointer-events: none;              /* 容器本身穿透，但按钮有 auto 所以可点 */
 }
 
 .mobile-nav-btn {

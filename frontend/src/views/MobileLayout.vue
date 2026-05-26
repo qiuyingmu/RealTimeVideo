@@ -22,7 +22,11 @@
 
     <!-- 页面内容区域 -->
     <main class="mobile-content">
-      <router-view />
+      <router-view v-slot="{ Component }">
+        <transition name="page-slide" mode="out-in">
+          <component :is="Component" />
+        </transition>
+      </router-view>
     </main>
 
     <!-- 底部导航栏 -->
@@ -197,5 +201,21 @@ async function handleLogout() {
   font-size: 10px;
   font-weight: 600;
   line-height: 1;
+}
+
+/* ====== 页面切换过渡动画 ====== */
+.page-slide-enter-active,
+.page-slide-leave-active {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.page-slide-enter-from {
+  opacity: 0;
+  transform: translateX(24px);
+}
+
+.page-slide-leave-to {
+  opacity: 0;
+  transform: translateX(-24px);
 }
 </style>

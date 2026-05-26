@@ -68,6 +68,12 @@
           </svg>
           <span class="control-label">{{ isFullscreen ? '退出全屏' : '全屏' }}</span>
         </button>
+        <button class="control-btn" @click="cycleScaleMode" :title="scaleModeLabel">
+          <svg viewBox="0 0 24 24" width="22" height="22">
+            <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <span class="control-label">{{ scaleModeLabel }}</span>
+        </button>
         <button class="control-btn" @click="nextChannel" :disabled="!hasNext">
           <svg viewBox="0 0 24 24" width="22" height="22">
             <polygon points="5 4 15 12 5 20 5 4" fill="none" stroke="currentColor" stroke-width="2"/>
@@ -133,6 +139,13 @@ const hasNext = computed(() => currentIndex.value >= 0 && currentIndex.value < c
 
 // 当前画质偏好
 const currentQuality = ref(localStorage.getItem('videoQuality') || 'hd')
+
+// 缩放模式：0=拉伸填充, 1=等比缩放(含黑边), 2=裁剪填充
+const scaleMode = ref(parseInt(localStorage.getItem('mobileScaleMode') || '0'))
+const SCALE_MODES = ['fill', 'fit', 'cover']
+const scaleModeLabel = computed(() => ({
+  fill: '拉伸填充', fit: '等比缩放', cover: '裁剪填充'
+}[SCALE_MODES[scaleMode.value]] || '拉伸填充'))
 
 // 播放地址（根据画质动态构建）
 const playUrl = computed(() => {
@@ -210,6 +223,15 @@ function toggleFullscreen() {
   }
 }
 
+// ====== 缩放模式循环切换（0→1→2→0） ======
+function cycleScaleMode() {
+  scaleMode.value = (scaleMode.value + 1) % 3
+  localStorage.setItem('mobileScaleMode', String(scaleMode.value))
+  if (playerInstance && typeof playerInstance.setScaleMode === 'function') {
+    playerInstance.setScaleMode(scaleMode.value)
+  }
+}
+
 function onFullscreenChange() {
   isFullscreen.value = !!document.fullscreenElement
   document.body.classList.toggle('video-fullscreen', isFullscreen.value)
@@ -269,7 +291,7 @@ async function initPlayer() {
       template: 'mobileLive',
       autoplay: true,
       staticPath: '/ezuikit_cdn',
-      scaleMode: 1,
+      scaleMode: scaleMode.value,
       audio: 0,
       width: '100%',
       height: '100%',
@@ -500,20 +522,16 @@ onUnmounted(() => {
   padding: 8px 12px;
   padding-top: calc(8px + env(safe-area-inset-top, 0));
   background: linear-gradient(180deg, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0) 100%);
-  /* 初始隐藏，触摸显示 */
-  opacity: 0;
-  transition: opacity 0.3s;
+  opacity: 1;
+  pointer-events: none;              /* 触摸穿透 → EZUIKit 云台控件可点 */
 }
 
-.player-bottom-bar.visible ~ .player-top-bar,
-.player-area:active .player-top-bar,
-.player-top-bar:hover {
-  opacity: 1;
+.top-btn {
+  pointer-events: auto;              /* 按钮可点击 */
 }
 
-/* 使用兄弟选择器不太好，用js控制class */
-.player-top-bar {
-  opacity: 1;
+.top-info {
+  pointer-events: auto;              /* 信息区域也可点击（方便触摸） */
 }
 
 .top-btn {
