@@ -11,28 +11,24 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
-
-import java.util.concurrent.locks.ReentrantLock;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * 萤石云开放平台集成服务
  *
  * 使用萤石云 OpenAPI 获取 accessToken、设备和通道信息。
  * 文档: https://open.ys7.com/doc/zh/book/index.html
- *
- * OpenAPI 调用说明：
- * 萤石云 OpenAPI 使用 POST + form-data 格式（非 JSON body），
- * accessToken 放在请求体中传递（非 Header）。
  */
 @Slf4j
 @Service
@@ -55,15 +51,20 @@ public class EzvizService {
     private final ChannelRepository channelRepository;
     private final RestTemplate restTemplate;
 
-    /** Token 刷新锁，防止并发刷新 */
     private final ReentrantLock tokenLock = new ReentrantLock();
 
     private String accessToken;
     private Instant tokenExpiresAt = Instant.EPOCH;
 
-    /**
-     * 获取萤石云 accessToken（自动缓存刷新）
-     */
+    // ---- 通道缓存（5秒TTL，减少数据库查询） ----
+    private List<Channel> cachedChannels;
+    private Instant channelsCacheExpiresAt = Instant.EPOCH;
+    private final ReentrantLock channelsCacheLock = new ReentrantLock();
+
+    // ================================================================
+    //  Token 管理
+    // ================================================================
+
     public String getAccessToken() {
         if (accessToken != null && Instant.now().isBefore(tokenExpiresAt)) {
             return accessToken;
@@ -72,17 +73,14 @@ public class EzvizService {
     }
 
     private String refreshAccessToken() {
-        // 先快速检查，避免锁竞争
         if (accessToken != null && Instant.now().isBefore(tokenExpiresAt)) {
             return accessToken;
         }
         tokenLock.lock();
         try {
-            // 双重检查：获取锁后再次检查是否已被其他线程刷新
             if (accessToken != null && Instant.now().isBefore(tokenExpiresAt)) {
                 return accessToken;
             }
-
             MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
             body.add("appKey", appKey);
             body.add("appSecret", appSecret);
@@ -92,18 +90,14 @@ public class EzvizService {
 
             @SuppressWarnings("unchecked")
             Map<String, Object> response = restTemplate.postForObject(
-                    TOKEN_URL,
-                    new HttpEntity<>(body, headers),
-                    Map.class);
+                    TOKEN_URL, new HttpEntity<>(body, headers), Map.class);
 
             if (response != null && "200".equals(String.valueOf(response.get("code")))) {
                 @SuppressWarnings("unchecked")
                 Map<String, Object> data = (Map<String, Object>) response.get("data");
-
                 this.accessToken = (String) data.get("accessToken");
                 long expireTime = ((Number) data.get("expireTime")).longValue();
                 this.tokenExpiresAt = Instant.ofEpochSecond(expireTime);
-
                 log.info("萤石云 accessToken 获取成功，有效期至: {}", tokenExpiresAt);
                 return this.accessToken;
             } else {
@@ -118,29 +112,63 @@ public class EzvizService {
         }
     }
 
-    /**
-     * 提供给前端的 accessToken（用于 EZUIKit 播放器）
-     */
     public Map<String, String> getEzvizToken() {
         return Map.of(
                 "accessToken", getAccessToken(),
                 "appKey", appKey,
-                "expiresIn", String.valueOf(
-                        Duration.between(Instant.now(), tokenExpiresAt).getSeconds())
+                "expiresIn", String.valueOf(Duration.between(Instant.now(), tokenExpiresAt).getSeconds())
         );
+    }
+
+    // ================================================================
+    //  设备 & 通道同步 + 缓存
+    // ================================================================
+
+    /**
+     * 获取所有通道（带 5 秒缓存）
+     * 前端每 30 秒轮询一次，缓存可以显著减少数据库查询
+     */
+    public List<Channel> getAllChannels() {
+        // 快速路径：缓存有效
+        if (cachedChannels != null && Instant.now().isBefore(channelsCacheExpiresAt)) {
+            return cachedChannels;
+        }
+        // 需要刷新
+        channelsCacheLock.lock();
+        try {
+            if (cachedChannels != null && Instant.now().isBefore(channelsCacheExpiresAt)) {
+                return cachedChannels;
+            }
+            this.cachedChannels = channelRepository.findAll();
+            this.channelsCacheExpiresAt = Instant.now().plusSeconds(5);
+            return this.cachedChannels;
+        } finally {
+            channelsCacheLock.unlock();
+        }
+    }
+
+    public List<Channel> getDeviceChannels(String deviceSerial) {
+        return channelRepository.findByDeviceSerialOrderByChannelNo(deviceSerial);
+    }
+
+    /**
+     * 使通道缓存失效（syncDevices / enableAllPtz 后调用）
+     */
+    private void invalidateChannelsCache() {
+        channelsCacheLock.lock();
+        try {
+            this.cachedChannels = null;
+            this.channelsCacheExpiresAt = Instant.EPOCH;
+        } finally {
+            channelsCacheLock.unlock();
+        }
     }
 
     /**
      * 从萤石云平台同步设备 + 通道列表到本地数据库
      *
-     * 1. 调用萤石云 OpenAPI 获取所有设备
-     * 2. 对每个设备调用通道列表 API 获取通道（摄像头）
-     * 3. 设备列表和通道列表写入本地数据库
-     *
      * 注意：不使用 @Transactional，每个设备的同步独立处理，
      * 一个设备失败不影响其他设备。
-     *
-     * @return 同步后的完整设备列表（含通道信息通过 deviceSerial 关联）
      */
     public List<Device> syncDevices() {
         String token = getAccessToken();
@@ -152,7 +180,6 @@ public class EzvizService {
         int total = Integer.MAX_VALUE;
 
         try {
-            // 第一步：获取所有设备
             while (pageStart < total) {
                 MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
                 body.add("accessToken", token);
@@ -164,9 +191,7 @@ public class EzvizService {
 
                 @SuppressWarnings("unchecked")
                 Map<String, Object> response = restTemplate.postForObject(
-                        DEVICE_LIST_URL,
-                        new HttpEntity<>(body, headers),
-                        Map.class);
+                        DEVICE_LIST_URL, new HttpEntity<>(body, headers), Map.class);
 
                 if (response == null || !"200".equals(String.valueOf(response.get("code")))) {
                     String msg = response != null ? (String) response.get("msg") : "无响应";
@@ -180,8 +205,7 @@ public class EzvizService {
                 }
 
                 @SuppressWarnings("unchecked")
-                List<Map<String, Object>> deviceList =
-                        (List<Map<String, Object>>) response.get("data");
+                List<Map<String, Object>> deviceList = (List<Map<String, Object>>) response.get("data");
 
                 if (deviceList != null) {
                     for (Map<String, Object> ezDevice : deviceList) {
@@ -195,23 +219,18 @@ public class EzvizService {
                         }
                     }
                 }
-
                 pageStart += pageSize;
             }
 
             log.info("萤石云同步完成，共 {} 台设备", syncedDevices.size());
+            invalidateChannelsCache();
             return syncedDevices;
-
         } catch (Exception e) {
             log.error("同步萤石云设备失败", e);
             throw new RuntimeException("同步萤石云设备失败: " + e.getMessage());
         }
     }
 
-    /**
-     * 同步单个设备的所有通道
-     * 调用萤石云摄像头列表 API
-     */
     private void syncDeviceChannels(String token, String deviceSerial) {
         MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
         body.add("accessToken", token);
@@ -223,9 +242,7 @@ public class EzvizService {
         try {
             @SuppressWarnings("unchecked")
             Map<String, Object> response = restTemplate.postForObject(
-                    CAMERA_LIST_URL,
-                    new HttpEntity<>(body, headers),
-                    Map.class);
+                    CAMERA_LIST_URL, new HttpEntity<>(body, headers), Map.class);
 
             if (response == null || !"200".equals(String.valueOf(response.get("code")))) {
                 log.warn("获取设备 {} 通道列表失败: {}", deviceSerial,
@@ -234,36 +251,23 @@ public class EzvizService {
             }
 
             @SuppressWarnings("unchecked")
-            List<Map<String, Object>> cameraList =
-                    (List<Map<String, Object>>) response.get("data");
-
+            List<Map<String, Object>> cameraList = (List<Map<String, Object>>) response.get("data");
             if (cameraList == null || cameraList.isEmpty()) {
                 log.debug("设备 {} 无通道或为 IPC 单通道设备", deviceSerial);
                 return;
             }
 
-            // 清除旧通道数据，重新写入
             channelRepository.deleteByDeviceSerial(deviceSerial);
 
-            // 获取设备名称
             String deviceName = deviceRepository.findByDeviceSerial(deviceSerial)
-                    .map(Device::getDeviceName)
-                    .orElse(deviceSerial);
+                    .map(Device::getDeviceName).orElse(deviceSerial);
 
+            // 批量构建所有 Channel 实体
+            List<Channel> channels = new ArrayList<>();
             for (Map<String, Object> cam : cameraList) {
-                Integer channelNo = null;
-                Object chObj = cam.get("channelNo");
-                if (chObj instanceof Number) {
-                    channelNo = ((Number) chObj).intValue();
-                } else if (chObj instanceof String) {
-                    channelNo = Integer.parseInt((String) chObj);
-                }
-
+                Integer channelNo = toIntOrNull(cam.get("channelNo"));
                 if (channelNo == null) continue;
 
-                String channelName = (String) cam.get("channelName");
-
-                // 状态转换
                 int statusCode = ((Number) cam.getOrDefault("status", 0)).intValue();
                 String status = switch (statusCode) {
                     case 1 -> "online";
@@ -272,57 +276,29 @@ public class EzvizService {
                     default -> "offline";
                 };
 
-                // 是否支持云台控制
-                boolean ptzSupported = "1".equals(String.valueOf(cam.getOrDefault("isSupportPTZ", "0")));
-                boolean talkSupported = "1".equals(String.valueOf(cam.getOrDefault("isSupportTalk", "0")));
-                boolean playbackSupported = "1".equals(String.valueOf(cam.getOrDefault("isSupportReplay", "0")));
-                String picUrl = (String) cam.get("picUrl");
-
-                Channel channel = Channel.builder()
+                channels.add(Channel.builder()
                         .deviceSerial(deviceSerial)
                         .deviceName(deviceName)
                         .channelNo(channelNo)
-                        .channelName(channelName)
+                        .channelName((String) cam.get("channelName"))
                         .status(status)
-                        .ptzSupported(ptzSupported)
-                        .talkSupported(talkSupported)
-                        .playbackSupported(playbackSupported)
-                        .picUrl(picUrl)
-                        .build();
-
-                channelRepository.save(channel);
+                        .ptzSupported("1".equals(String.valueOf(cam.getOrDefault("isSupportPTZ", "0"))))
+                        .talkSupported("1".equals(String.valueOf(cam.getOrDefault("isSupportTalk", "0"))))
+                        .playbackSupported("1".equals(String.valueOf(cam.getOrDefault("isSupportReplay", "0"))))
+                        .picUrl((String) cam.get("picUrl"))
+                        .build());
             }
 
-            long count = channelRepository.countByDeviceSerial(deviceSerial);
-            log.debug("设备 {} 同步了 {} 个通道", deviceSerial, count);
-
+            // 批量保存（一次 flush，代替逐条 save）
+            channelRepository.saveAll(channels);
+            log.debug("设备 {} 同步了 {} 个通道", deviceSerial, channels.size());
         } catch (Exception e) {
             log.error("同步设备 {} 通道失败: {}", deviceSerial, e.getMessage());
         }
     }
 
-    /**
-     * 获取某个设备的所有通道
-     */
-    public List<Channel> getDeviceChannels(String deviceSerial) {
-        return channelRepository.findByDeviceSerialOrderByChannelNo(deviceSerial);
-    }
-
-    /**
-     * 获取所有设备的所有通道（展平视图）
-     */
-    public List<Channel> getAllChannels() {
-        return channelRepository.findAll();
-    }
-
-    /**
-     * 将萤石云 API 返回的设备转换为本地 Device 实体并保存
-     */
     private Device convertAndSaveDevice(Map<String, Object> ezDevice) {
         String deviceSerial = (String) ezDevice.get("deviceSerial");
-        String deviceName = (String) ezDevice.get("deviceName");
-        String deviceType = (String) ezDevice.get("deviceType");
-
         int statusCode = ((Number) ezDevice.getOrDefault("status", 0)).intValue();
         String status = switch (statusCode) {
             case 1 -> "online";
@@ -337,37 +313,16 @@ public class EzvizService {
                         .appKey(this.appKey)
                         .build());
 
-        device.setDeviceName(deviceName);
-        device.setDeviceType(deviceType);
+        device.setDeviceName((String) ezDevice.get("deviceName"));
+        device.setDeviceType((String) ezDevice.get("deviceType"));
         device.setStatus(status);
-
         return deviceRepository.save(device);
     }
 
-    /**
-     * 启用所有通道的 PTZ（云台）控制功能
-     * 部分 NVR 摄像头虽然硬件支持 PTZ，但 API 返回的 isSupportPTZ 可能为 false，
-     * 调用此方法可强制开启所有通道的 PTZ 控制。
-     *
-     * @return 更新的通道数量
-     */
-    public int enableAllPtz() {
-        List<Channel> allChannels = channelRepository.findAll();
-        int count = 0;
-        for (Channel ch : allChannels) {
-            if (!ch.getPtzSupported()) {
-                ch.setPtzSupported(true);
-                channelRepository.save(ch);
-                count++;
-            }
-        }
-        log.info("已启用 {} 个通道的 PTZ 控制", count);
-        return count;
-    }
+    // ================================================================
+    //  PTZ 控制
+    // ================================================================
 
-    /**
-     * 方向常量映射表
-     */
     public static final int DIR_LEFT = 1;
     public static final int DIR_RIGHT = 2;
     public static final int DIR_UP = 3;
@@ -375,28 +330,28 @@ public class EzvizService {
     public static final int DIR_ZOOM_IN = 5;
     public static final int DIR_ZOOM_OUT = 6;
 
-    /**
-     * 发送 PTZ 云台控制命令（开始转动）
-     *
-     * 调用萤石云 OpenAPI 控制摄像头云台转动。
-     *
-     * @param deviceSerial 设备序列号
-     * @param channelNo    通道号
-     * @param direction    方向 (1=左, 2=右, 3=上, 4=下, 5=变焦+, 6=变焦-)
-     * @param speed        速度 (0-100, 默认50)
-     */
     public void startPtz(String deviceSerial, int channelNo, int direction, int speed) {
         String token = getAccessToken();
         String url = String.format(PTZ_START_URL, deviceSerial, channelNo);
-
         MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
         body.add("accessToken", token);
         body.add("direction", String.valueOf(direction));
         body.add("speed", String.valueOf(speed));
+        executePtzRequest(url, body, "start", deviceSerial, channelNo);
+    }
 
+    public void stopPtz(String deviceSerial, int channelNo) {
+        String token = getAccessToken();
+        String url = String.format(PTZ_STOP_URL, deviceSerial, channelNo);
+        MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
+        body.add("accessToken", token);
+        executePtzRequest(url, body, "stop", deviceSerial, channelNo);
+    }
+
+    private void executePtzRequest(String url, MultiValueMap<String, String> body,
+                                    String action, String deviceSerial, int channelNo) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-
         try {
             @SuppressWarnings("unchecked")
             Map<String, Object> response = restTemplate.postForObject(
@@ -404,61 +359,73 @@ public class EzvizService {
 
             if (response == null || !"200".equals(String.valueOf(response.get("code")))) {
                 String msg = response != null ? (String) response.get("msg") : "无响应";
-                log.warn("PTZ start 失败 [{}/CH{}]: {}", deviceSerial, channelNo, msg);
-                throw new RuntimeException("PTZ控制失败: " + msg);
+                log.warn("PTZ {} 失败 [{}/CH{}]: {}", action, deviceSerial, channelNo, msg);
+                if ("start".equals(action)) {
+                    throw new RuntimeException("PTZ控制失败: " + msg);
+                }
             }
-            log.debug("PTZ start [{}/CH{}] direction={} speed={}", deviceSerial, channelNo, direction, speed);
+        } catch (RuntimeException e) {
+            throw e;
         } catch (Exception e) {
-            log.error("PTZ start 异常 [{}/CH{}]: {}", deviceSerial, channelNo, e.getMessage());
+            log.error("PTZ {} 异常 [{}/CH{}]: {}", action, deviceSerial, channelNo, e.getMessage());
             throw new RuntimeException("PTZ控制失败: " + e.getMessage());
         }
     }
 
-    /**
-     * 停止 PTZ 云台转动
-     *
-     * @param deviceSerial 设备序列号
-     * @param channelNo    通道号
-     */
-    public void stopPtz(String deviceSerial, int channelNo) {
-        String token = getAccessToken();
-        String url = String.format(PTZ_STOP_URL, deviceSerial, channelNo);
+    // ================================================================
+    //  批量操作
+    // ================================================================
 
-        MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
-        body.add("accessToken", token);
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-
-        try {
-            @SuppressWarnings("unchecked")
-            Map<String, Object> response = restTemplate.postForObject(
-                    url, new HttpEntity<>(body, headers), Map.class);
-
-            if (response == null || !"200".equals(String.valueOf(response.get("code")))) {
-                String msg = response != null ? (String) response.get("msg") : "无响应";
-                log.warn("PTZ stop 失败 [{}/CH{}]: {}", deviceSerial, channelNo, msg);
-                // 停止失败通常不需要抛异常，日志记录即可
-            } else {
-                log.debug("PTZ stop [{}/CH{}]", deviceSerial, channelNo);
+    public int enableAllPtz() {
+        List<Channel> allChannels = channelRepository.findAll();
+        int count = 0;
+        for (Channel ch : allChannels) {
+            if (!ch.getPtzSupported()) {
+                ch.setPtzSupported(true);
+                count++;
             }
+        }
+        if (count > 0) {
+            channelRepository.saveAll(allChannels);
+            invalidateChannelsCache();
+        }
+        log.info("已启用 {} 个通道的 PTZ 控制", count);
+        return count;
+    }
+
+    // ================================================================
+    //  初始化（异步，不阻塞启动）
+    // ================================================================
+
+    /**
+     * 异步初始化萤石云服务：获取 Token + 同步设备
+     * 使用 @Async 确保不阻塞 Spring Boot 启动
+     */
+    @Async
+    @PostConstruct
+    public void init() {
+        if (appKey.isEmpty() || appSecret.isEmpty()) {
+            log.warn("萤石云未配置 appKey/appSecret，跳过初始化");
+            return;
+        }
+        try {
+            getAccessToken();
+            log.info("萤石云服务初始化成功");
+            syncDevices();
         } catch (Exception e) {
-            log.error("PTZ stop 异常 [{}/CH{}]: {}", deviceSerial, channelNo, e.getMessage());
+            log.warn("萤石云服务初始化失败（将在首次 API 调用时自动重试）: {}", e.getMessage());
         }
     }
 
-    @PostConstruct
-    public void init() {
-        if (!appKey.isEmpty() && !appSecret.isEmpty()) {
-            try {
-                getAccessToken();
-                log.info("萤石云服务初始化成功");
-                syncDevices();
-            } catch (Exception e) {
-                log.warn("萤石云服务初始化失败: {}", e.getMessage());
-            }
-        } else {
-            log.warn("萤石云未配置 appKey/appSecret");
+    // ================================================================
+    //  工具方法
+    // ================================================================
+
+    private static Integer toIntOrNull(Object obj) {
+        if (obj instanceof Number) return ((Number) obj).intValue();
+        if (obj instanceof String s) {
+            try { return Integer.parseInt(s); } catch (NumberFormatException e) { return null; }
         }
+        return null;
     }
 }
