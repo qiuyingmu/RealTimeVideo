@@ -319,4 +319,58 @@ async function handleLogin() {
   from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .login-page {
+    padding: 0;
+    align-items: flex-start;
+    background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+  }
+
+  .login-container {
+    max-width: 100%;
+    border-radius: 16px 16px 0 0;
+    margin-top: 80px;
+    padding: 32px 24px;
+    padding-bottom: 40px;
+  }
+
+  .login-header svg {
+    width: 56px;
+    height: 56px;
+  }
+
+  .login-header h1 {
+    font-size: 22px;
+  }
+
+  .login-header p {
+    font-size: 13px;
+  }
+
+  .input-wrapper {
+    margin-bottom: 18px;
+  }
+
+  .input-wrapper input {
+    padding: 14px 16px;
+    font-size: 16px; /* 防止iOS缩放 */
+    padding-left: 44px;
+  }
+
+  .input-icon {
+    left: 14px;
+  }
+
+  .btn-login {
+    padding: 16px;
+    font-size: 16px;
+  }
+
+  .toggle-password {
+    right: 14px;
+    padding: 8px;
+  }
+}
 </style>

@@ -21,6 +21,18 @@ const routes = [
     meta: { requiresAuth: true, requiresAdmin: true }
   },
   {
+    path: '/admin/permissions',
+    name: 'AdminPermissions',
+    component: () => import('@/views/AdminPermissions.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true }
+  },
+  {
+    path: '/admin/logs',
+    name: 'AdminLogs',
+    component: () => import('@/views/AdminLogs.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true }
+  },
+  {
     path: '/:pathMatch(.*)*',
     redirect: '/'
   }

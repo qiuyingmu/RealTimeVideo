@@ -16,6 +16,8 @@
       <div class="navbar-right">
         <router-link to="/" class="nav-link">设备列表</router-link>
         <router-link v-if="authStore.isAdmin" to="/admin/users" class="nav-link">用户管理</router-link>
+        <router-link v-if="authStore.isAdmin" to="/admin/permissions" class="nav-link">设备权限</router-link>
+        <router-link v-if="authStore.isAdmin" to="/admin/logs" class="nav-link">操作日志</router-link>
         <div class="user-info">
           <span class="username">{{ authStore.displayName || authStore.username }}</span>
           <span v-if="authStore.isAdmin" class="role-badge admin">管理员</span>

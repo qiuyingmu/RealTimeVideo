@@ -235,7 +235,24 @@ export const adminApi = {
     api.put(`/admin/users/${id}/reset-password`, { newPassword }),
 
   deleteUser: (id) =>
-    api.delete(`/admin/users/${id}`)
+    api.delete(`/admin/users/${id}`),
+
+  // 设备权限管理
+  getPermissions: () =>
+    api.get('/admin/permissions'),
+
+  getUserPermissions: (userId) =>
+    api.get(`/admin/permissions/user/${userId}`),
+
+  setUserPermissions: (userId, data) =>
+    api.put(`/admin/permissions/user/${userId}`, data),
+
+  removeDevicePermission: (userId, deviceSerial) =>
+    api.delete(`/admin/permissions/user/${userId}/device/${deviceSerial}`),
+
+  // 操作日志
+  getLogs: (params) =>
+    api.get('/admin/logs', { params })
 }
 
 // 健康检查

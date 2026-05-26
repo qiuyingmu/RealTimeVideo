@@ -640,4 +640,28 @@ function formatTime(timeStr) {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .admin-page { padding: 16px; }
+
+  .admin-header { flex-direction: column; gap: 12px; align-items: flex-start; }
+
+  .user-table { font-size: 12px; }
+  .user-table th, .user-table td { padding: 8px 8px; }
+  .user-table td:nth-child(6), .user-table th:nth-child(6) { display: none; } /* 隐藏最后登录时间 */
+  .user-table td:nth-child(7), .user-table th:nth-child(7) { display: none; } /* 隐藏失败次数 */
+
+  .action-btn { font-size: 11px; padding: 4px 8px; }
+  .table-wrap { margin: 0 -16px; border-radius: 0; }
+
+  /* 弹窗全屏 */
+  .modal-overlay { align-items: flex-end; }
+  .modal-content {
+    max-width: 100%;
+    border-radius: 16px 16px 0 0;
+    margin-top: auto;
+    max-height: 80vh;
+  }
+}
 </style>
