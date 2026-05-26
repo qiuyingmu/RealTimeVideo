@@ -239,7 +239,7 @@ function createPlayer() {
     height: '100%',
     // 从用户偏好读取画质（默认高清）
     videoLevel: localStorage.getItem('videoQuality') || 'hd',
-    videoLevelList: [localStorage.getItem('videoQuality') || 'hd'],
+    videoLevelList: ['hd', 'sd', 'fluent'],
     mobileExtendOptions: {
       controls: ['ptz', 'rec', 'date'],
       showClose: false,

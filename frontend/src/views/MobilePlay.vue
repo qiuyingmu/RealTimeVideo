@@ -270,6 +270,7 @@ async function initPlayer() {
       width: '100%',
       height: '100%',
       videoLevel: localStorage.getItem('videoQuality') === 'sd' ? 'sd' : localStorage.getItem('videoQuality') === 'fluent' ? 'fluent' : 'hd',
+      videoLevelList: ['hd', 'sd', 'fluent'],
       handleSuccess: () => {
         initialized.value = true
         isSwitchingChannel.value = false
