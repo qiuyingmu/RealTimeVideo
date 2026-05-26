@@ -115,7 +115,7 @@ function checkNetworkQuality() {
 }
 
 const playUrl = computed(() =>
-  `ezopen://open.ys7.com/${props.channel.deviceSerial}/${props.channel.channelNo}.hd.live`
+  `ezopen://open.ys7.com/${props.channel.deviceSerial}/${props.channel.channelNo}.sd.live`
 )
 
 const loadMessage = computed(() => {
@@ -161,7 +161,6 @@ function destroyPlayerInstance() {
 /** 创建播放器 — 基于萤石云官方 security 模板，内置全部控件 */
 function createPlayer() {
   if (!currentToken) { error.value = '无法获取播放凭证，请刷新页面后重试'; loading.value = false; return }
-  if (isInitializing) return
 
   loadStep.value = 3
 
