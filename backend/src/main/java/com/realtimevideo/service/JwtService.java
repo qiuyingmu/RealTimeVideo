@@ -41,8 +41,8 @@ public class JwtService {
                 byte[] keyBytes = Decoders.BASE64.decode(jwtSecret);
                 this.signingKey = Keys.hmacShaKeyFor(keyBytes);
                 log.info("JWT 密钥加载成功 ({} bits)", keyBytes.length * 8);
-            } catch (WeakKeyException | IllegalArgumentException e) {
-                log.warn("JWT 密钥强度不足 ({}), 自动生成临时密钥", e.getMessage());
+            } catch (Exception e) {
+                log.warn("JWT 密钥加载失败 ({}), 自动生成临时密钥", e.getMessage());
                 log.warn("⚠️  警告：自动生成的密钥在重启后会丢失！生产环境必须在 .env 或环境变量中配置 JWT_SECRET");
                 log.warn("⚠️  生成命令: openssl rand -base64 32");
                 this.signingKey = Jwts.SIG.HS256.key().build();
