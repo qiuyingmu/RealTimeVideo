@@ -55,8 +55,8 @@
                 {{ actionLabel(log.action) }}
               </span>
             </td>
-            <td class="cell-target">{{ log.target || '-' }}</td>
-            <td class="cell-detail">{{ log.details || '-' }}</td>
+            <td class="cell-target" :title="log.target || '-'">{{ log.target || '-' }}</td>
+            <td class="cell-detail" :title="log.details || '-'">{{ log.details || '-' }}</td>
             <td class="cell-ip">{{ log.ipAddress || '-' }}</td>
           </tr>
         </tbody>

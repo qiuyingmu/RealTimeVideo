@@ -1,5 +1,5 @@
 <template>
-  <div class="video-player-wrapper">
+  <div class="video-player-wrapper" ref="playerWrapperRef">
     <!-- 加载中 -->
     <div v-if="!initialized && !error && !isRetrying && !isSwitchingQuality" class="player-loading">
       <div class="loading-spinner">
@@ -58,10 +58,33 @@
     <!-- 播放器容器（EZUIKit security模板内置全部控件） -->
     <div id="ezuikit-player" class="ezuikit-player" v-show="!error"></div>
 
-    <!-- 网速指示器（唯一自定义叠加层） -->
+    <!-- 网速指示器 -->
     <div v-if="initialized && !isSwitchingQuality && !isRetrying" class="network-indicator" :class="networkQuality">
       <span class="ni-dot"></span>
       <span class="ni-label">{{ networkLabel }}</span>
+    </div>
+
+    <!-- ====== 移动端覆盖层控件 ====== -->
+    <div v-if="initialized && isMobile" class="mobile-controls-overlay" @click="toggleControls">
+      <!-- 切频道按钮（左侧） -->
+      <button v-if="showMobileControls" class="mobile-nav-btn mobile-nav-left" @click.stop="emitPrevChannel" aria-label="上一个通道">
+        <svg viewBox="0 0 24 24" width="22" height="22"><polyline points="15 18 9 12 15 6" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <!-- 切频道按钮（右侧） -->
+      <button v-if="showMobileControls" class="mobile-nav-btn mobile-nav-right" @click.stop="emitNextChannel" aria-label="下一个通道">
+        <svg viewBox="0 0 24 24" width="22" height="22"><polyline points="9 6 15 12 9 18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <!-- 底部操作栏 -->
+      <div v-if="showMobileControls" class="mobile-bottom-bar">
+        <button class="mobile-bottom-btn" @click.stop="toggleFullscreen" :aria-label="isFullscreen ? '退出全屏' : '全屏'">
+          <svg v-if="!isFullscreen" viewBox="0 0 24 24" width="20" height="20">
+            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <svg v-else viewBox="0 0 24 24" width="20" height="20">
+            <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -77,7 +100,10 @@ const props = defineProps({
   appKey: { type: String, default: '' }
 })
 
+const emit = defineEmits(['prev-channel', 'next-channel'])
+
 const MAX_RETRIES = 3
+const SWIPE_THRESHOLD = 50
 
 const loading = ref(true)
 const initialized = ref(false)
@@ -88,11 +114,19 @@ const retryCount = ref(0)
 const isRetrying = ref(false)
 const isSwitchingQuality = ref(false)
 const networkQuality = ref('good')
+const isFullscreen = ref(false)
+const showMobileControls = ref(false)
+const isMobile = ref(false)
+
+const playerWrapperRef = ref(null)
 
 let playerInstance = null
 let currentToken = null
 let networkMonitor = null
 let isInitializing = false
+let controlsHideTimer = null
+let touchStartX = 0
+let touchStartY = 0
 
 const CONNECT_TIMEOUT = 30000
 const RETRY_BASE_DELAY = 1000
@@ -102,6 +136,12 @@ const networkLabel = computed(() => ({
   good: '网络良好', fair: '网络一般', poor: '网络较差'
 }[networkQuality.value] || '网络良好'))
 
+const loadMessage = computed(() => {
+  const msgs = { 0: '准备中...', 1: '获取凭证...', 2: '连接服务器...', 3: '加载视频流...' }
+  return msgs[loadStep.value] || '连接中...'
+})
+
+// ====== 网络质量检测 ======
 function checkNetworkQuality() {
   const start = performance.now()
   return fetch('/api/health', { method: 'GET', cache: 'no-store' })
@@ -114,13 +154,9 @@ function checkNetworkQuality() {
     .catch(() => { networkQuality.value = 'poor' })
 }
 
+// ====== 播放地址 ======
 const playUrl = computed(() => {
-  // 始终使用 deviceSerial + channelNo 构建播放地址
-  // NVR通道：ezopen://open.ys7.com/{NVR序列号}/{通道号}.hd.live
-  // IPC直连：ezopen://open.ys7.com/{设备序列号}/1.hd.live
-  // 注意：ipcSerial 仅用于内部标识，萤石云API不识别其作为直播地址
   const url = `ezopen://open.ys7.com/${props.channel.deviceSerial}/${props.channel.channelNo}.hd.live`
-  // 仅开发环境打印调试日志
   if (import.meta.env.DEV) {
     console.log('[VideoPlayer] URL:',
       `ezopen://open.ys7.com/${props.channel.deviceSerial}/${props.channel.channelNo}.hd.live`,
@@ -130,11 +166,7 @@ const playUrl = computed(() => {
   return url
 })
 
-const loadMessage = computed(() => {
-  const msgs = { 0: '准备中...', 1: '获取凭证...', 2: '连接服务器...', 3: '加载视频流...' }
-  return msgs[loadStep.value] || '连接中...'
-})
-
+// ====== 超时/重试逻辑 ======
 function getRetryDelay(attempt) {
   return Math.min(RETRY_BASE_DELAY * Math.pow(2, attempt), RETRY_MAX_DELAY) + Math.random() * 1000
 }
@@ -170,7 +202,7 @@ function destroyPlayerInstance() {
   }
 }
 
-/** 创建播放器 — 基于萤石云官方 security 模板，内置全部控件 */
+// ====== 创建播放器 ======
 function createPlayer() {
   if (!currentToken) { error.value = '无法获取播放凭证，请刷新页面后重试'; loading.value = false; return }
 
@@ -182,18 +214,16 @@ function createPlayer() {
     id: 'ezuikit-player',
     accessToken: currentToken,
     url: playUrl.value,
-    template: 'pcLive',             // PC直播模板（包含云台控制、截图、录制等）
-    autoplay: true,                 // 自动播放
-    staticPath: '/ezuikit_cdn',      // 通过Vite代理CDN并修正WASM的MIME类型
-    scaleMode: 1,                   // 缩放模式: 0=contain(黑边) 1=cover(填充) 2=stretch
-    audio: 0,                       // 默认静音（浏览器自动播放策略）
+    template: 'pcLive',             // 通用模板（移动端通过自定义控件实现全屏等体验）
+    autoplay: true,
+    staticPath: '/ezuikit_cdn',
+    scaleMode: 1,
+    audio: 0,
     width: '100%',
     height: '100%',
-    // 移动端扩展选项
     mobileExtendOptions: {
-      controls: ['ptz', 'rec', 'date'],  // 移动端控件
+      controls: ['ptz', 'rec', 'date'],
     },
-    // 画质列表（取第一个可用）
     videoLevelList: null,
     handleSuccess: () => {
       clearLoadTimeout()
@@ -250,14 +280,119 @@ function destroyPlayer() {
   destroyPlayerInstance()
 }
 
+// ====== 全屏控制 ======
+function toggleFullscreen() {
+  const el = playerWrapperRef.value
+  if (!el) return
+
+  if (!document.fullscreenElement) {
+    if (el.requestFullscreen) {
+      el.requestFullscreen().catch(() => {})
+    } else if (el.webkitRequestFullscreen) {
+      el.webkitRequestFullscreen()
+    }
+    isFullscreen.value = true
+  } else {
+    if (document.exitFullscreen) {
+      document.exitFullscreen().catch(() => {})
+    } else if (document.webkitExitFullscreen) {
+      document.webkitExitFullscreen()
+    }
+    isFullscreen.value = false
+  }
+}
+
+function onFullscreenChange() {
+  isFullscreen.value = !!document.fullscreenElement
+  // 在全屏/退出时通知父组件（用于隐藏header等）
+  document.dispatchEvent(new CustomEvent('video-fullscreen-change', {
+    detail: { isFullscreen: isFullscreen.value }
+  }))
+}
+
+// ====== 移动端控制栏 ======
+function showControlsTemporarily() {
+  showMobileControls.value = true
+  clearTimeout(controlsHideTimer)
+  controlsHideTimer = setTimeout(() => {
+    showMobileControls.value = false
+  }, 4000)
+}
+
+function toggleControls() {
+  if (showMobileControls.value) {
+    showMobileControls.value = false
+    clearTimeout(controlsHideTimer)
+  } else {
+    showControlsTemporarily()
+  }
+}
+
+function emitPrevChannel() {
+  emit('prev-channel')
+  showControlsTemporarily()
+}
+
+function emitNextChannel() {
+  emit('next-channel')
+  showControlsTemporarily()
+}
+
+// ====== 手势控制 ======
+function onTouchStart(e) {
+  touchStartX = e.touches[0].clientX
+  touchStartY = e.touches[0].clientY
+}
+
+function onTouchEnd(e) {
+  const endX = e.changedTouches[0].clientX
+  const deltaX = endX - touchStartX
+
+  // 只处理水平滑动（忽略小幅度抖动）
+  if (Math.abs(deltaX) >= SWIPE_THRESHOLD) {
+    if (deltaX > 0) {
+      emitPrevChannel()  // 右滑 → 上一个
+    } else {
+      emitNextChannel()  // 左滑 → 下一个
+    }
+  }
+
+  showControlsTemporarily()
+}
+
+// ====== 横屏变化检测 ======
+function checkOrientation() {
+  // 触发全屏事件检查，用于父组件自动隐藏header
+  document.dispatchEvent(new CustomEvent('video-orientation-change', {
+    detail: { landscape: window.innerWidth > window.innerHeight }
+  }))
+}
+
+// ====== 生命周期 ======
 onMounted(() => {
+  isMobile.value = window.innerWidth <= 768
+
   initPlayer()
   networkMonitor = setInterval(checkNetworkQuality, 30000)
+
+  document.addEventListener('fullscreenchange', onFullscreenChange)
+  document.addEventListener('webkitfullscreenchange', onFullscreenChange)
+  window.addEventListener('orientationchange', checkOrientation)
+  window.addEventListener('resize', checkOrientation)
+
+  // 首次显示控制栏
+  setTimeout(showControlsTemporarily, 1500)
 })
 
 onUnmounted(() => {
   if (networkMonitor) { clearInterval(networkMonitor); networkMonitor = null }
+  clearTimeout(controlsHideTimer)
   destroyPlayer()
+
+  document.removeEventListener('fullscreenchange', onFullscreenChange)
+  document.removeEventListener('webkitfullscreenchange', onFullscreenChange)
+  window.removeEventListener('orientationchange', checkOrientation)
+  window.removeEventListener('resize', checkOrientation)
 })
 </script>
 
@@ -268,21 +403,22 @@ onUnmounted(() => {
   background: #0f0f1a;
   border-radius: 8px;
   overflow: hidden;
-  /* 防止子元素溢出导致滚动 */
-  contain: layout size style;
 }
 .ezuikit-player {
   width: 100%; height: 100%; min-height: 300px;
+  position: relative;
+  z-index: 1;
 }
 
 /* ====== 全屏模式 ====== */
-:fullscreen .video-player-wrapper,
-:-webkit-full-screen .video-player-wrapper {
+.video-player-wrapper:fullscreen,
+.video-player-wrapper:-webkit-full-screen {
   border-radius: 0;
   background: #000;
+  width: 100vw; height: 100vh;
 }
-:fullscreen .ezuikit-player,
-:-webkit-full-screen .ezuikit-player {
+.video-player-wrapper:fullscreen .ezuikit-player,
+.video-player-wrapper:-webkit-full-screen .ezuikit-player {
   min-height: 100vh;
 }
 
@@ -359,18 +495,63 @@ onUnmounted(() => {
 .network-indicator.poor .ni-dot { background: #ef4444; box-shadow: 0 0 6px rgba(239, 68, 68, 0.5); }
 .network-indicator.poor .ni-label { color: #fca5a5; }
 
+/* ====== 移动端覆盖控件 ====== */
+.mobile-controls-overlay {
+  position: absolute; inset: 0; z-index: 30;
+  touch-action: none;
+}
+
+.mobile-nav-btn {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  width: 44px; height: 60px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border: none; border-radius: 8px;
+  color: #fff; cursor: pointer;
+  transition: all 0.2s;
+  z-index: 31;
+}
+.mobile-nav-btn:active {
+  background: rgba(0, 0, 0, 0.5);
+}
+.mobile-nav-left { left: 6px; }
+.mobile-nav-right { right: 6px; }
+
+.mobile-bottom-bar {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  display: flex; align-items: center; justify-content: flex-end;
+  padding: 12px 16px 16px;
+  z-index: 31;
+}
+
+.mobile-bottom-btn {
+  width: 44px; height: 44px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 50%;
+  color: #fff; cursor: pointer;
+  transition: all 0.2s;
+}
+.mobile-bottom-btn:active {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(0.95);
+}
+
 /* ====== 移动端适配 ====== */
 @media (max-width: 768px) {
   .video-player-wrapper {
     border-radius: 0;
-    /* 移动端视频优先占满视口宽度 */
     touch-action: manipulation;
     -webkit-touch-callout: none;
   }
   .ezuikit-player {
     min-height: 240px;
-    /* 竖屏时固定宽高比，横屏时最大化 */
-    aspect-ratio: 16 / 9;
+    height: 100%;
   }
   .loading-text { font-size: 12px; }
   .network-indicator { top: 6px; right: 6px; padding: 3px 8px; font-size: 9px; }
@@ -388,10 +569,11 @@ onUnmounted(() => {
 @media (max-height: 500px) and (orientation: landscape) {
   .video-player-wrapper {
     height: 100vh;
+    border-radius: 0;
   }
   .ezuikit-player {
     min-height: 100%;
-    aspect-ratio: auto;
+    height: 100vh;
   }
 }
 

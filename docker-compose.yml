@@ -32,7 +32,7 @@ services:
         condition: service_healthy
     environment:
       # 数据库
-      DB_URL: jdbc:mysql://db:3306/realtime_video?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf8mb4&allowPublicKeyRetrieval=true
+      DB_URL: jdbc:mysql://db:3306/realtime_video?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
       DB_DRIVER: com.mysql.cj.jdbc.Driver
       DB_USERNAME: videoapp
       DB_PASSWORD: ${MYSQL_PASSWORD:-VideoApp@2026}

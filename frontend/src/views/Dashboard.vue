@@ -64,7 +64,7 @@
             >
               <polyline points="9 18 15 12 9 6" fill="none" stroke="currentColor" stroke-width="2"/>
             </svg>
-            <span class="group-name">{{ group.deviceName }}</span>
+            <span class="group-name" :title="group.deviceName">{{ group.deviceName }}</span>
             <span class="group-badge" :class="group.hasOnline ? 'online' : 'offline'">
               {{ group.channels.length }}
             </span>
@@ -79,7 +79,7 @@
               @click="selectChannel(ch)"
             >
               <span class="ch-status-dot" :class="ch.status"></span>
-              <span class="ch-name">{{ ch.channelName || '通道' + ch.channelNo }}</span>
+              <span class="ch-name" :title="ch.channelName || '通道' + ch.channelNo">{{ ch.channelName || '通道' + ch.channelNo }}</span>
               <span class="ch-no">CH{{ ch.channelNo }}</span>
             </div>
           </div>
@@ -111,7 +111,7 @@
               </button>
               <div class="video-title">
                 <strong>{{ selectedChannel.channelName || '通道' + selectedChannel.channelNo }}</strong>
-                <span class="video-meta">
+                <span class="video-meta" :title="getDeviceName(selectedChannel.deviceSerial) + ' · CH' + selectedChannel.channelNo">
                   {{ getDeviceName(selectedChannel.deviceSerial) }} · CH{{ selectedChannel.channelNo }}
                 </span>
               </div>
@@ -127,6 +127,8 @@
               :channel="selectedChannel"
               :cached-token="ezvizToken?.accessToken || null"
               :key="playerKey"
+              @prev-channel="goToPrevChannel"
+              @next-channel="goToNextChannel"
             />
           </div>
         </div>
@@ -201,7 +203,7 @@ async function fetchEzvizToken(forceRefresh = false) {
   }
 }
 
-// 按设备分组
+// 按设备分组（在线通道优先排序）
 const deviceGroups = computed(() => {
   const map = {}
   for (const ch of channels.value) {
@@ -218,7 +220,20 @@ const deviceGroups = computed(() => {
     map[serial].channels.push(ch)
     if (ch.status === 'online') map[serial].hasOnline = true
   }
-  return Object.values(map)
+  // 每个设备组内：在线通道排前面
+  for (const g of Object.values(map)) {
+    g.channels.sort((a, b) => {
+      if (a.status === 'online' && b.status !== 'online') return -1
+      if (a.status !== 'online' && b.status === 'online') return 1
+      return (a.channelName || '') > (b.channelName || '') ? 1 : -1
+    })
+  }
+  // 设备组之间：有在线通道的组排前面
+  return Object.values(map).sort((a, b) => {
+    if (a.hasOnline && !b.hasOnline) return -1
+    if (!a.hasOnline && b.hasOnline) return 1
+    return (a.deviceName || '').localeCompare(b.deviceName || '')
+  })
 })
 
 // 搜索过滤
@@ -232,8 +247,17 @@ const filteredGroups = computed(() => {
       (ch.channelName || '').toLowerCase().includes(q) ||
       String(ch.channelNo).includes(q) ||
       ch.deviceSerial.toLowerCase().includes(q)
-    )
+    ).sort((a, b) => {
+      if (a.status === 'online' && b.status !== 'online') return -1
+      if (a.status !== 'online' && b.status === 'online') return 1
+      return (a.channelName || '').localeCompare(b.channelName || '')
+    })
   })).filter(g => g.channels.length > 0)
+    .sort((a, b) => {
+      if (a.hasOnline && !b.hasOnline) return -1
+      if (!a.hasOnline && b.hasOnline) return 1
+      return (a.deviceName || '').localeCompare(b.deviceName || '')
+    })
 })
 
 // 自动选择第一个在线通道
@@ -262,6 +286,40 @@ function selectChannel(ch) {
 function getDeviceName(serial) {
   const g = deviceGroups.value.find(g => g.deviceSerial === serial)
   return g?.deviceName || serial
+}
+
+/** 获取当前选中的通道在列表中的索引 */
+function getCurrentChannelIndex() {
+  const allChannels = channels.value
+  if (!selectedChannel.value || allChannels.length === 0) return -1
+  return allChannels.findIndex(c =>
+    c.deviceSerial === selectedChannel.value.deviceSerial &&
+    c.channelNo === selectedChannel.value.channelNo
+  )
+}
+
+/** 切换到上一个通道 */
+function goToPrevChannel() {
+  const allChannels = channels.value
+  if (allChannels.length === 0) return
+  const idx = getCurrentChannelIndex()
+  if (idx <= 0) {
+    selectChannel(allChannels[allChannels.length - 1]) // 循环到最后一个
+  } else {
+    selectChannel(allChannels[idx - 1])
+  }
+}
+
+/** 切换到下一个通道 */
+function goToNextChannel() {
+  const allChannels = channels.value
+  if (allChannels.length === 0) return
+  const idx = getCurrentChannelIndex()
+  if (idx < 0 || idx >= allChannels.length - 1) {
+    selectChannel(allChannels[0]) // 循环到第一个
+  } else {
+    selectChannel(allChannels[idx + 1])
+  }
 }
 
 /** 刷新通道列表（保持当前选中的通道） */
@@ -316,13 +374,28 @@ onMounted(async () => {
       channels.value = newChannels
     }).catch(() => {})
   }, 30000)
+
+  // 监听全屏/横屏事件，用于自动隐藏导航栏
+  document.addEventListener('video-fullscreen-change', onFullscreenChange)
+  document.addEventListener('video-orientation-change', onOrientationChange)
 })
+
+function onFullscreenChange(e) {
+  document.body.classList.toggle('video-fullscreen', e.detail.isFullscreen)
+}
+
+function onOrientationChange(e) {
+  document.body.classList.toggle('video-landscape', e.detail.landscape)
+}
 
 onUnmounted(() => {
   if (refreshInterval) {
     clearInterval(refreshInterval)
     refreshInterval = null
   }
+  document.removeEventListener('video-fullscreen-change', onFullscreenChange)
+  document.removeEventListener('video-orientation-change', onOrientationChange)
+  document.body.classList.remove('video-fullscreen', 'video-landscape')
 })
 
 async function syncFromEzviz() {
@@ -664,10 +737,12 @@ async function syncFromEzviz() {
 .video-container {
   flex: 1;
   padding: 0;
-  min-height: 0;
   background: #000;
-  /* 桌面端保持合理最小高度 */
-  min-height: 400px;
+  /* 使用0而不是400px，让flex布局自动分配空间 */
+  min-height: 0;
+  /* 防止EZUIKit内部resize时容器收缩 */
+  flex-shrink: 0;
+  flex-basis: 0;
 }
 
 /* 欢迎页 */
@@ -771,24 +846,21 @@ async function syncFromEzviz() {
 
   .video-container {
     padding: 0;
-    /* 移动端视频尽量占满可用空间 */
+    /* 移动端视频占满可用空间，不设上限 */
     min-height: 40vh;
-    max-height: 60vh;
   }
 
   /* 小屏手机：视频最大化 */
   @media (max-height: 700px) {
     .video-container {
-      min-height: 50vh;
-      max-height: 70vh;
+      min-height: 55vh;
     }
   }
 
   /* 横屏模式：视频占满全屏 */
   @media (max-height: 500px) and (orientation: landscape) {
     .video-container {
-      min-height: calc(100vh - 56px - 40px - 36px);
-      max-height: none;
+      min-height: calc(100vh - 56px - 40px);
     }
     .video-header {
       padding: 4px 12px;

@@ -24,7 +24,7 @@
           >
             <div class="user-avatar">{{ u.displayName?.[0] || u.username[0] }}</div>
             <div class="user-info">
-              <strong>{{ u.displayName || u.username }}</strong>
+              <strong :title="u.displayName || u.username">{{ u.displayName || u.username }}</strong>
               <span class="user-role" :class="u.role === 'ROLE_ADMIN' ? 'admin' : 'user'">
                 {{ u.role === 'ROLE_ADMIN' ? '管理员' : '普通用户' }}
               </span>

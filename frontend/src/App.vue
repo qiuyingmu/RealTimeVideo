@@ -215,3 +215,29 @@ main.with-nav {
   }
 }
 </style>
+
+<!-- 全屏/横屏全局样式（非scoped，作用于body） -->
+<style>
+/* 全屏模式：隐藏导航栏，body无滚动 */
+body.video-fullscreen {
+  overflow: hidden;
+}
+body.video-fullscreen .navbar {
+  display: none;
+}
+body.video-fullscreen main.with-nav {
+  padding: 0;
+  min-height: 100vh;
+}
+
+/* 移动端横屏：隐藏导航栏，视频占满全屏 */
+@media (max-width: 768px) and (orientation: landscape) {
+  body.video-landscape .navbar {
+    display: none;
+  }
+  body.video-landscape main.with-nav {
+    padding: 0;
+    min-height: 100vh;
+  }
+}
+</style>
