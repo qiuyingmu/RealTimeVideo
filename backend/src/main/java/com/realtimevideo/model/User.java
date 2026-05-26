@@ -15,8 +15,7 @@ import java.util.List;
 
 @Entity
 @Table(name = "users", uniqueConstraints = {
-        @UniqueConstraint(columnNames = "username"),
-        @UniqueConstraint(columnNames = "email")
+        @UniqueConstraint(columnNames = "username")
 })
 @Data
 @Builder
@@ -31,7 +30,7 @@ public class User implements UserDetails {
     @Column(nullable = false, length = 50, unique = true)
     private String username;
 
-    @Column(nullable = false, length = 100, unique = true)
+    @Column(length = 100)
     private String email;
 
     @Column(nullable = false, length = 255)

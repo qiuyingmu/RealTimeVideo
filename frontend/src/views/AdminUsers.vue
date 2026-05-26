@@ -34,7 +34,6 @@
             <th>ID</th>
             <th>用户名</th>
             <th>显示名</th>
-            <th>邮箱</th>
             <th>角色</th>
             <th>状态</th>
             <th>登录失败次数</th>
@@ -47,7 +46,6 @@
             <td class="cell-id">{{ user.id }}</td>
             <td class="cell-username">{{ user.username }}</td>
             <td>{{ user.displayName || '-' }}</td>
-            <td class="cell-email">{{ user.email }}</td>
             <td>
               <span class="role-badge" :class="user.role === 'ROLE_ADMIN' ? 'admin' : 'user'">
                 {{ user.role === 'ROLE_ADMIN' ? '管理员' : '普通用户' }}
@@ -119,10 +117,6 @@
               <label>用户名 <span class="required">*</span></label>
               <input v-model="createForm.username" placeholder="3-50个字符，字母/数字/下划线" required maxlength="50"/>
               <small>只能包含字母、数字和下划线</small>
-            </div>
-            <div class="form-group">
-              <label>邮箱 <span class="required">*</span></label>
-              <input v-model="createForm.email" type="email" placeholder="user@example.com" required maxlength="100"/>
             </div>
             <div class="form-group">
               <label>密码 <span class="required">*</span></label>
@@ -199,7 +193,6 @@ const resetting = ref(false)
 
 const createForm = reactive({
   username: '',
-  email: '',
   password: '',
   displayName: '',
   role: 'ROLE_USER'
@@ -228,7 +221,6 @@ async function createUser() {
     await adminApi.createUser({ ...createForm })
     showCreateDialog.value = false
     createForm.username = ''
-    createForm.email = ''
     createForm.password = ''
     createForm.displayName = ''
     createForm.role = 'ROLE_USER'
@@ -649,8 +641,8 @@ function formatTime(timeStr) {
 
   .user-table { font-size: 12px; }
   .user-table th, .user-table td { padding: 8px 8px; }
-  .user-table td:nth-child(6), .user-table th:nth-child(6) { display: none; } /* 隐藏最后登录时间 */
-  .user-table td:nth-child(7), .user-table th:nth-child(7) { display: none; } /* 隐藏失败次数 */
+  .user-table td:nth-child(5), .user-table th:nth-child(5) { display: none; } /* 隐藏最后登录时间 */
+  .user-table td:nth-child(6), .user-table th:nth-child(6) { display: none; } /* 隐藏失败次数 */
 
   .action-btn { font-size: 11px; padding: 4px 8px; }
   .table-wrap { margin: 0 -16px; border-radius: 0; }

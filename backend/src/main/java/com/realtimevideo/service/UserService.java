@@ -155,14 +155,8 @@ public class UserService {
             throw new IllegalArgumentException("用户名已存在");
         }
 
-        // 检查邮箱是否已存在
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new IllegalArgumentException("邮箱已被使用");
-        }
-
         User user = User.builder()
                 .username(request.getUsername())
-                .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .displayName(request.getDisplayName())
                 .role(Role.valueOf(request.getRole()))
