@@ -175,8 +175,8 @@ const isMobile = ref(window.innerWidth <= 768 || 'ontouchstart' in window)
 const ptzPanelOpen = ref(false)
 
 // 缩放模式：0=拉伸填充, 1=等比缩放(含黑边), 2=裁剪填充
-// PC 端默认 0（拉伸填充，不截断画面），移动端默认 2（裁剪填充，铺满全屏不变形）
-const defaultScaleMode = isMobile.value ? 2 : 0
+// 默认 0（拉伸填充）—— 移动端不用 cover(2)，避免放大裁剪导致像素级模糊
+const defaultScaleMode = 0
 const scaleMode = ref(parseInt(localStorage.getItem('scaleMode') || String(defaultScaleMode)))
 
 const SCALE_MODES = ['fill', 'fit', 'cover']
@@ -224,7 +224,9 @@ function checkNetworkQuality() {
 
 // ====== 播放地址 ======
 const playUrl = computed(() => {
-  const quality = localStorage.getItem('videoQuality') || 'hd'
+  // 移动端强制 HD 画质（保证清晰度最高的 URL 请求）
+  const isMobileDevice = window.innerWidth <= 768 || 'ontouchstart' in window
+  const quality = isMobileDevice ? 'hd' : (localStorage.getItem('videoQuality') || 'hd')
   const url = `ezopen://open.ys7.com/${props.channel.deviceSerial}/${props.channel.channelNo}.${quality}.live`
   if (import.meta.env.DEV) {
     console.log('[VideoPlayer] URL:',
@@ -295,8 +297,9 @@ function createPlayer() {
     audio: 0,
     width: '100%',
     height: '100%',
-    // 从用户偏好读取画质（默认高清）
-    videoLevel: localStorage.getItem('videoQuality') || 'hd',
+    // 从用户偏好读取画质。SDK 内部使用数字等级（0=流畅, 1=标清, 2=高清），
+    // 传入字符串 'hd' 会导致 setVideoLevel 内部 parseInt('hd') = NaN。
+    videoLevel: parseInt(localStorage.getItem('videoQuality') || '2', 10),
     videoLevelList: [
       { value: 'hd', name: '高清' },
       { value: 'sd', name: '标清' },

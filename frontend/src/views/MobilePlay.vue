@@ -168,8 +168,9 @@ const hasNext = computed(() => currentIndex.value >= 0 && currentIndex.value < c
 // 当前画质偏好
 const currentQuality = ref(localStorage.getItem('videoQuality') || 'hd')
 
-// 缩放模式：0=拉伸填充, 1=等比缩放(含黑边), 2=裁剪填充（移动端默认裁剪填充，铺满全屏且不变形）
-const scaleMode = ref(parseInt(localStorage.getItem('scaleMode') || '2'))
+// 缩放模式：0=拉伸填充, 1=等比缩放(含黑边), 2=裁剪填充
+// 默认 0（拉伸填充）—— 避免 cover(2) 放大裁剪导致像素级模糊
+const scaleMode = ref(parseInt(localStorage.getItem('scaleMode') || '0'))
 const SCALE_MODES = ['fill', 'fit', 'cover']
 const scaleModeLabel = computed(() => ({
   fill: '拉伸填充', fit: '等比缩放', cover: '裁剪填充'
@@ -348,7 +349,8 @@ async function initPlayer() {
       audio: 0,
       width: '100%',
       height: '100%',
-      videoLevel: localStorage.getItem('videoQuality') === 'sd' ? 'sd' : localStorage.getItem('videoQuality') === 'fluent' ? 'fluent' : 'hd',
+      // SDK 内部使用数字等级（0=流畅, 1=标清, 2=高清），传入字符串会导致 parseInt('hd') = NaN
+      videoLevel: parseInt(localStorage.getItem('videoQuality') === 'sd' ? '1' : localStorage.getItem('videoQuality') === 'fluent' ? '0' : '2', 10),
       videoLevelList: [
         { value: 'hd', name: '高清' },
         { value: 'sd', name: '标清' },
