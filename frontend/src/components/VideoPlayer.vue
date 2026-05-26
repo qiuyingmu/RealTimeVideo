@@ -178,7 +178,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { ezvizApi } from '@/api'
 import EZUIKit from 'ezuikit-js'
 
@@ -206,6 +206,7 @@ const networkQuality = ref('good')
 let playerInstance = null
 let currentToken = null
 let networkMonitor = null
+let isInitializing = false     // 防止并发初始化
 
 // ====== 核心性能优化参数 ======
 const CONNECT_TIMEOUT = 30000     // 30秒（原45秒，减少等待时间，加快失败重试）
@@ -332,6 +333,11 @@ function createPlayer() {
     return
   }
 
+  // 如果正在销毁/初始化中，跳过
+  if (isInitializing) {
+    return
+  }
+
   loadStep.value = 3
 
   const plugins = []
@@ -367,11 +373,13 @@ function createPlayer() {
         '395415': '设备通道错误',
         '399001': '网络超时，正在重试...',
         '3820032': '通道不存在',
+        '10001': '视频流协议错误，正在重试...',
       }
       const errorMsg = errorMap[String(code)] || `播放失败(${code}): ${msg}`
 
-      // 网络超时也触发自动重试
-      if (String(code) === '399001' && retryCount.value < MAX_RETRIES) {
+      // 网络超时(399001)或协议错误(10001)时自动重试
+      const retryableCodes = ['399001', '10001']
+      if (retryableCodes.includes(String(code)) && retryCount.value < MAX_RETRIES) {
         handleConnectTimeout()
       } else {
         error.value = errorMsg
@@ -383,6 +391,12 @@ function createPlayer() {
 }
 
 async function initPlayer() {
+  // 防止并发初始化（watch + onMounted 同时触发）
+  if (isInitializing) {
+    return
+  }
+  isInitializing = true
+
   loading.value = true
   error.value = ''
   initialized.value = false
@@ -414,6 +428,8 @@ async function initPlayer() {
     error.value = '连接失败: ' + (err.response?.data?.message || err.message)
     loading.value = false
     isSwitchingQuality.value = false
+  } finally {
+    isInitializing = false
   }
 }
 
@@ -477,13 +493,6 @@ onUnmounted(() => {
     networkMonitor = null
   }
   destroyPlayer()
-})
-
-watch(() => props.channel.id + '-' + props.channel.channelNo, () => {
-  destroyPlayer()
-  // 切换通道时重置画质为 auto
-  quality.value = 'auto'
-  initPlayer()
 })
 </script>
 
