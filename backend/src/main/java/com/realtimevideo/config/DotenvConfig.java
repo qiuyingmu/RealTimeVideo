@@ -1,6 +1,7 @@
 package com.realtimevideo.config;
 
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.env.EnvironmentPostProcessor;
 import org.springframework.core.env.ConfigurableEnvironment;
@@ -21,8 +22,9 @@ import java.util.Map;
  *
  * 优先级：系统环境变量 > .env 文件 > application.yml 默认值
  */
-@Slf4j
 public class DotenvConfig implements EnvironmentPostProcessor {
+
+    private static final Logger log = LoggerFactory.getLogger(DotenvConfig.class);
 
     private static final String DOTENV_FILE = ".env";
 

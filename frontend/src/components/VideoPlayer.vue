@@ -65,7 +65,7 @@
       </button>
     </div>
 
-    <!-- 播放器容器（EZUIKit security模板内置全部控件） -->
+    <!-- 播放器容器（EZUIKit pcLive 模板：全屏视频 + 右侧悬浮控件栏） -->
     <div id="ezuikit-player" class="ezuikit-player" v-show="!error"></div>
 
     <!-- 网速指示器 -->
@@ -74,71 +74,15 @@
       <span class="ni-label">{{ networkLabel }}</span>
     </div>
 
-    <!-- ====== 移动端 - 频道切换 + 当前通道指示 ======
-         EZUIKit mobileLive 模板自带底部工具栏（全屏/画质等），
-         我们只补充 EZUIKit 不提供的「上一个/下一个通道」导航按钮、当前通道指示和自定义 PTZ 面板。 -->
-    <div v-if="initialized && isMobile && !isSwitchingChannel" class="mobile-nav-overlay">
-      <div v-if="showMobileControls" class="mobile-channel-info">
-        <span class="mobile-channel-name">{{ props.channel.channelName || ('通道' + props.channel.channelNo) }}</span>
-        <span class="mobile-channel-device">{{ props.channel.deviceName || props.channel.deviceSerial }} · CH{{ props.channel.channelNo }}</span>
-      </div>
-      <button v-if="showMobileControls" class="mobile-nav-btn mobile-nav-left" @click.stop="emitPrevChannel" aria-label="上一个通道">
+    <!-- ====== 频道切换导航按钮（pcLive 模板不提供此功能） ====== -->
+    <div v-if="initialized && !isSwitchingChannel" class="channel-nav-overlay">
+      <button class="ch-nav-btn ch-nav-left" @click.stop="emitPrevChannel" aria-label="上一个通道">
         <svg viewBox="0 0 24 24" width="22" height="22"><polyline points="15 18 9 12 15 6" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
-      <button v-if="showMobileControls" class="mobile-nav-btn mobile-nav-right" @click.stop="emitNextChannel" aria-label="下一个通道">
+      <button class="ch-nav-btn ch-nav-right" @click.stop="emitNextChannel" aria-label="下一个通道">
         <svg viewBox="0 0 24 24" width="22" height="22"><polyline points="9 6 15 12 9 18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
-
-      <!-- 自定义 PTZ 触发按钮（替代 EZUIKit 原生 PTZ，避免右侧弹出半屏面板） -->
-      <button v-if="showMobileControls" class="mobile-ptz-trigger" @click.stop="togglePtzPanel" aria-label="云台控制">
-        <svg viewBox="0 0 24 24" width="22" height="22">
-          <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/>
-          <line x1="12" y1="3" x2="12" y2="8" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
-          <line x1="12" y1="16" x2="12" y2="21" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
-          <line x1="3" y1="12" x2="8" y2="12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
-          <line x1="16" y1="12" x2="21" y2="12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
-        </svg>
-      </button>
     </div>
-
-    <!-- ====== 自定义底部 PTZ 控制面板（替代 EZUIKit 右侧弹出面板） ====== -->
-    <Transition name="ptz-slide">
-      <div v-if="ptzPanelOpen && isMobile" class="custom-ptz-panel" @click.stop>
-        <div class="ptz-panel-header">
-          <span class="ptz-panel-title">云台控制</span>
-          <button class="ptz-close-btn" @click="ptzPanelOpen = false" aria-label="关闭云台控制">
-            <svg viewBox="0 0 24 24" width="18" height="18">
-              <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-              <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-          </button>
-        </div>
-        <div class="ptz-panel-body">
-          <div class="ptz-dpad">
-            <!-- 上 -->
-            <button class="ptz-dir-btn ptz-up" @touchstart.prevent="startPtz(1)" @touchend.prevent="stopPtz" @mousedown.prevent="startPtz(1)" @mouseup="stopPtz" @mouseleave="stopPtz" aria-label="云台上转">
-              <svg viewBox="0 0 24 24" width="24" height="24"><polyline points="18 15 12 9 6 15" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </button>
-            <!-- 左 -->
-            <button class="ptz-dir-btn ptz-left" @touchstart.prevent="startPtz(3)" @touchend.prevent="stopPtz" @mousedown.prevent="startPtz(3)" @mouseup="stopPtz" @mouseleave="stopPtz" aria-label="云台左转">
-              <svg viewBox="0 0 24 24" width="24" height="24"><polyline points="15 18 9 12 15 6" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </button>
-            <!-- 中心 -->
-            <div class="ptz-center">
-              <svg viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="12" r="3" fill="currentColor" opacity="0.6"/></svg>
-            </div>
-            <!-- 右 -->
-            <button class="ptz-dir-btn ptz-right" @touchstart.prevent="startPtz(4)" @touchend.prevent="stopPtz" @mousedown.prevent="startPtz(4)" @mouseup="stopPtz" @mouseleave="stopPtz" aria-label="云台右转">
-              <svg viewBox="0 0 24 24" width="24" height="24"><polyline points="9 18 15 12 9 6" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </button>
-            <!-- 下 -->
-            <button class="ptz-dir-btn ptz-down" @touchstart.prevent="startPtz(2)" @touchend.prevent="stopPtz" @mousedown.prevent="startPtz(2)" @mouseup="stopPtz" @mouseleave="stopPtz" aria-label="云台下转">
-              <svg viewBox="0 0 24 24" width="24" height="24"><polyline points="6 9 12 15 18 9" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </button>
-          </div>
-        </div>
-      </div>
-    </Transition>
   </div>
 </template>
 
@@ -282,15 +226,16 @@ function createPlayer() {
 
   const plugins = props.channel.talkSupported ? ['talk'] : []
 
-  // 检测是否为移动端，选择合适模板
-  const isMobileDevice = window.innerWidth <= 768 || 'ontouchstart' in window
-  const playerTemplate = isMobileDevice ? 'mobileLive' : 'pcLive'
+  // 统一使用 pcLive 模板（右侧控制面板），兼容桌面和移动端横屏。
+  // mobileLive 模板在移动端竖屏模式下画面过小，清晰度严重受损。
+  // pcLive 提供全屏视频 + 右侧悬浮控件，移动端配合横屏锁定效果最佳。
+  const playerTemplate = 'pcLive'
 
   playerInstance = new EZUIKit.EZUIKitPlayer({
     id: 'ezuikit-player',
     accessToken: currentToken,
     url: playUrl.value,
-    template: playerTemplate,          // 根据设备自动选择模板
+    template: playerTemplate,          // pcLive 模板：全屏视频 + 右侧悬浮控件栏
     autoplay: true,
     staticPath: '/ezuikit_cdn',
     scaleMode: scaleMode.value,          // 从 localStorage 读取用户偏好的缩放模式
@@ -695,14 +640,14 @@ onUnmounted(() => {
 .network-indicator.poor .ni-dot { background: #ef4444; box-shadow: 0 0 6px rgba(239, 68, 68, 0.5); }
 .network-indicator.poor .ni-label { color: #fca5a5; }
 
-/* ====== 移动端频道导航按钮（EZUIKit 不提供此功能） ====== */
-.mobile-nav-overlay {
+/* ====== 频道切换导航按钮（pcLive 模板不提供此功能） ====== */
+.channel-nav-overlay {
   position: absolute; inset: 0; z-index: 30;
   pointer-events: none;              /* 触摸穿透 → EZUIKit 原生控件可操作 */
   touch-action: none;
 }
 
-.mobile-nav-btn {
+.ch-nav-btn {
   position: absolute; top: 50%; transform: translateY(-50%);
   width: 44px; height: 60px;
   display: flex; align-items: center; justify-content: center;
@@ -715,62 +660,11 @@ onUnmounted(() => {
   pointer-events: auto;              /* 按钮可点击 */
   z-index: 31;
 }
-.mobile-nav-btn:active {
+.ch-nav-btn:active {
   background: rgba(0, 0, 0, 0.5);
 }
-.mobile-nav-left { left: 6px; }
-.mobile-nav-right { right: 6px; }
-
-/* 移动端通道信息指示 */
-.mobile-channel-info {
-  position: absolute;
-  top: 12px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 32;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  padding: 6px 16px;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border-radius: 20px;
-  border: 1px solid rgba(255,255,255,0.1);
-  pointer-events: none;
-  max-width: 70%;
-}
-
-.mobile-channel-name {
-  font-size: 13px;
-  font-weight: 600;
-  color: #fff;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 100%;
-}
-
-.mobile-channel-device {
-  font-size: 10px;
-  color: rgba(255,255,255,0.6);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 100%;
-}
-
-/* ====== EZUIKit 移动端控件尺寸优化（保留但不缩放原生 PTZ 面板） ====== */
-:deep(.ezui-mobile-controls .ezui-control-btn) {
-  min-width: 36px !important;
-  min-height: 36px !important;
-}
-
-:deep(.ezui-mobile-controls .ezui-control-btn svg) {
-  width: 20px !important;
-  height: 20px !important;
-}
+.ch-nav-left { left: 6px; }
+.ch-nav-right { right: 6px; }
 
 /* ====== 自定义 PTZ 触发按钮 ====== */
 .mobile-ptz-trigger {
@@ -938,6 +832,87 @@ onUnmounted(() => {
 @media (max-width: 400px) {
   .ezuikit-player {
     min-height: 200px;
+  }
+}
+
+/* ====== pcLive 模板移动端布局覆盖（解决 iPhone 横屏视频被挤压问题） ====== */
+@media (max-width: 768px) {
+  /* 1. 播放器主容器 — 确保全宽 */
+  .ezuikit-player :deep(.ezui-player-widget) {
+    width: 100% !important;
+    flex-direction: column !important;
+  }
+
+  /* 2. 右侧工具栏 — 浮动覆盖在视频右上角 */
+  .ezuikit-player :deep(.ezui-player-right) {
+    position: absolute !important;
+    top: 0 !important;
+    right: 0 !important;
+    width: auto !important;
+    height: auto !important;
+    background: transparent !important;
+    z-index: 50 !important;
+    pointer-events: auto !important;
+  }
+
+  /* 3. 左侧视频区域 — 占满全宽 */
+  .ezuikit-player :deep(.ezui-player-left) {
+    width: 100% !important;
+    height: 100% !important;
+    position: relative !important;
+  }
+
+  /* 4. video/canvas 元素 — 覆盖填满 */
+  .ezuikit-player :deep(.ezui-player-left video),
+  .ezuikit-player :deep(.ezui-player-left canvas) {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+  }
+
+  /* 5. 工具栏按钮组 — 紧凑排列在右上角 */
+  .ezuikit-player :deep(.ezui-player-right .ezui-toolbar) {
+    flex-direction: column !important;
+    gap: 2px !important;
+    padding: 4px !important;
+    background: rgba(0, 0, 0, 0.35) !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+    border-radius: 8px !important;
+    margin: 8px !important;
+  }
+
+  /* 6. PTZ 弹出面板 — 调整层级避免被遮挡 */
+  .ezuikit-player :deep(.ezui-ptz-panel),
+  .ezuikit-player :deep(.ezui-popover) {
+    z-index: 60 !important;
+  }
+
+  /* 7. 隐藏非必要的 pcLive 装饰元素 */
+  .ezuikit-player :deep(.ezui-player-header) {
+    display: none !important;
+  }
+  .ezuikit-player :deep(.ezui-player-footer) {
+    display: none !important;
+  }
+
+  /* 8. 播放器外层容器 — 强制定位确保覆盖生效 */
+  .ezuikit-player {
+    position: relative !important;
+    overflow: hidden !important;
+  }
+
+  /* 9. 小高度横屏优化（工具栏横向排列） */
+  @media (max-height: 500px) and (orientation: landscape) {
+    .ezuikit-player :deep(.ezui-player-right .ezui-toolbar) {
+      flex-direction: row !important;
+      padding: 3px 6px !important;
+      margin: 4px !important;
+      gap: 1px !important;
+    }
+    .ezuikit-player :deep(.ezui-player-right .ezui-toolbar button) {
+      transform: scale(0.75) !important;
+    }
   }
 }
 

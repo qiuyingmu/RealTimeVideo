@@ -44,6 +44,7 @@ security:
 
 cors:
   allowed-origins: ${CORS_ORIGINS:http://localhost:5173,http://localhost:3000}
+  allowed-origin-patterns: ${CORS_ORIGIN_PATTERNS:https?://localhost:*}
 
 ezviz:
   app-key: ${EZS_APP_KEY:}
