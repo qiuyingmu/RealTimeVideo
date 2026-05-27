@@ -42,9 +42,9 @@ services:
       EZS_APP_KEY: ${EZS_APP_KEY}
       EZS_APP_SECRET: ${EZS_APP_SECRET}
       # CORS（容器内）
-      CORS_ORIGINS: http://localhost:80,http://localhost
+      CORS_ORIGINS: http://localhost:80,http://localhost,http://47.108.204.59:8080,http://47.108.204.59
     ports:
-      - "127.0.0.1:8080:8080"
+      - "8080:8080"
 
   # ======================== Nginx 前端 ========================
   frontend:
