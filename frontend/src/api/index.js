@@ -120,7 +120,7 @@ function normalizeError(error) {
       }
       break
     case 401:
-      error.friendlyMessage = '请重新登录'
+      error.friendlyMessage = serverMsg || '请重新登录'
       break
     case 403:
       error.friendlyMessage = '权限不足，无法执行此操作'
