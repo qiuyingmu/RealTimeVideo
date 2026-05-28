@@ -10,17 +10,17 @@
 │   ├── config/       # 安全配置、CORS、JWT过滤器、限流器
 │   ├── controller/   # REST API 控制器
 │   ├── dto/          # 数据传输对象
-│   ├── model/        # 实体模型 (User/Device/Channel)
+│   ├── model/        # 实体模型 (User/Device/Channel/OperationLog)
 │   ├── repository/   # JPA 数据访问层
 │   └── service/      # 业务逻辑层
 ├── frontend/         # Vue 3 前端
 │   └── src/
 │       ├── api/      # Axios API 客户端
-│       ├── components/ # 可复用组件 (VideoPlayer)
+│       ├── components/ # 可复用组件 (VideoPlayer/Toast)
 │       ├── router/   # Vue Router 路由配置
 │       ├── store/    # Pinia 状态管理
-│       └── views/    # 页面视图 (Login/Dashboard/Admin)
-└── README.md         # 项目文档（本文件）
+│       └── views/    # 页面视图 (Login/Dashboard/Admin/Mobile)
+└── deploy/           # Docker 部署配置
 ```
 
 ## 🏗️ 系统架构图
@@ -67,13 +67,14 @@ flowchart TB
             JwtService["JwtService<br/>JWT令牌"]
             DeviceService["DeviceService<br/>设备管理"]
             EzvizService["EzvizService<br/>萤石云集成"]
+            AuditLogService["AuditLogService<br/>审计日志"]
         end
 
         subgraph 数据层["💾 数据层"]
             UserRepository["UserRepository"]
             DeviceRepository["DeviceRepository"]
             ChannelRepository["ChannelRepository"]
-            DB[("H2/MySQL<br/>数据库")]
+            DB[("MySQL/H2<br/>数据库")]
         end
 
         subgraph 外部集成["🌐 外部集成"]
@@ -109,41 +110,23 @@ flowchart TB
 3. 前端携带 Token 获取设备列表 /api/ezviz/channels
 4. 前端获取萤石云 accessToken → 传递给 EZUIKit 播放器
 5. EZUIKit 通过 ezopen:// 协议解析直播地址并播放视频
-6. 解码器文件（WASM）通过 Vite 代理加载，修正 CDN 的 MIME 类型
-7. 用户可使用云台控制 (PTZ)、截图、录制、画质切换等功能
+6. 用户可使用云台控制 (PTZ)、截图、录制、画质切换等功能
 ```
-
-## 🔧 已解决问题记录
-
-### WASM 编译失败（Incorrect MIME type）
-- **原因**: 萤石云 CDN 返回 `.wasm` 文件时使用 `Content-Type: application/octet-stream`，浏览器 WebAssembly 流式编译要求 `application/wasm`
-- **解决**: 在 Vite 配置中添加 `/ezuikit_cdn` 代理，拦截 `.wasm` 文件响应并修正 Content-Type
-- **关键配置**: `vite.config.js` 中的 `proxy` 和 `wasm-mime-type-fix` 插件
-
-### ezopen 协议 10001 错误
-- **原因**: 使用了错误的设备序列号（`ipcSerial`），萤石云直播地址 API 只识别 `deviceSerial`
-- **解决**: 始终使用 `deviceSerial`（NVR 序列号）+ `channelNo`（通道号）构建播放地址
-- **格式**: `ezopen://open.ys7.com/{deviceSerial}/{channelNo}.hd.live`
-
-### SharedArrayBuffer 不可用
-- **原因**: 缺少 COEP/COOP 响应头
-- **解决**: 在 Vite 配置中添加 `Cross-Origin-Embedder-Policy: credentialless` 和 `Cross-Origin-Opener-Policy: same-origin`
-
-### 视频黑边问题
-- **原因**: 播放器缩放模式默认 `contain`（保持比例留黑边）
-- **解决**: 设置 `scaleMode: 1`（cover 填充模式）
 
 ## ✨ 功能特性
 
-- **🔐 用户认证** — JWT 双 Token 机制（Access + Refresh Token），自动刷新
+- **🔐 用户认证** — JWT 双 Token 机制（Access + Refresh Token），refreshToken 通过 httpOnly Cookie 传输
 - **📹 视频直播** — 基于 EZUIKit 播放器，支持萤石云设备实时查看
 - **🎚️ 画质切换** — 流畅/高清/自动三档画质，自动检测网络质量
 - **🎮 PTZ 云台控制** — 上下左右 + 变焦控制，支持鼠标/触控
 - **📋 设备管理** — 萤石云设备自动同步，通道列表树形展示
 - **👥 用户管理** — 管理员后台，支持创建/禁用/重置密码
-- **🛡️ 安全防护** — 登录失败锁定、请求限流、JWT 黑名单机制
-- **⚡ 性能优化** — 视频缓冲区自适应、网络质量检测、指数退避重连
-- **🔄 状态刷新** — 定时自动刷新设备在线状态
+- **🛡️ 设备权限隔离** — 普通用户只能查看已授权的设备通道
+- **📝 操作审计日志** — 记录用户关键操作，支持分页查询与筛选
+- **🔒 登录安全** — 登录失败锁定（5 次/30 分钟）、请求限流（Bucket4j 令牌桶）
+- **⚡ 性能优化** — 通道列表 5 秒缓存、智能在线状态轮询刷新
+- **📱 移动端适配** — 独立移动端布局，抽屉式侧边栏，横屏全屏播放
+- **🌙 夜间模式** — 深色主题支持，保护夜间观看体验
 
 ## 🚀 快速启动
 
@@ -152,26 +135,34 @@ flowchart TB
 - **JDK 17+**
 - **Node.js 18+**
 - **Maven 3.8+**
+- **Docker + Docker Compose**（生产部署）
 
-### 后端启动
+### 开发环境启动
 
 ```bash
+# 1. 启动后端
 cd backend
 mvn clean install -DskipTests
 mvn spring-boot:run
-```
+# 服务启动在 http://localhost:8080
 
-服务启动在 `http://localhost:8080`，H2 控制台：`http://localhost:8080/h2-console`
-
-### 前端启动
-
-```bash
+# 2. 启动前端（新开终端）
 cd frontend
 npm install
 npm run dev
+# 开发服务器启动在 http://localhost:5173
 ```
 
-开发服务器启动在 `http://localhost:5173`
+### Docker 生产部署
+
+```bash
+# 使用预构建产物快速部署（推荐）
+docker compose down
+docker compose up -d --build
+
+# 或使用服务器一键部署脚本
+bash deploy-server.sh
+```
 
 ### 默认账户
 
@@ -191,38 +182,53 @@ npm run dev
 | **状态管理** | Pinia | ^2.1.7 |
 | **路由** | Vue Router | ^4.3.2 |
 | **HTTP 客户端** | Axios | ^1.7.2 |
-| **视频播放** | EZUIKit | ^9.0.5 |
+| **视频播放** | EZUIKit (ezuikit-js) | ^9.0.5 |
 | **后端框架** | Spring Boot | 3.2.5 |
 | **安全框架** | Spring Security | 3.2.5 |
 | **ORM** | Spring Data JPA | 3.2.5 |
-| **数据库** | H2 / MySQL | - |
+| **数据库** | MySQL 8.0 / H2 | - |
 | **JWT** | JJWT | 0.12.5 |
 | **限流** | Bucket4j | 8.7.0 |
+| **部署** | Docker Compose | - |
 
 ## 🔧 配置说明
 
-### 萤石云配置
+### 环境变量
 
-在 `application.yml` 中配置萤石云 API 凭证：
-
-```yaml
-ezviz:
-  app-key: YOUR_APP_KEY
-  app-secret: YOUR_APP_SECRET
-```
-
-### 生产部署
-
-使用 `--spring.profiles.active=prod` 激活生产配置：
+项目使用 `.env` 文件管理敏感配置（已在 `.gitignore` 中排除）：
 
 ```bash
-java -jar backend/target/realtime-video-backend-1.0.0.jar --spring.profiles.active=prod
+# 萤石云 OpenAPI 凭证（在 console.ys7.com 获取）
+EZS_APP_KEY=你的萤石云appKey
+EZS_APP_SECRET=你的萤石云appSecret
+
+# JWT 签名密钥（生产环境务必修改）
+# 生成命令: openssl rand -base64 32
+JWT_SECRET=你的BASE64编码的随机密钥
 ```
 
-生产环境需要配置：
-- MySQL 数据库连接
-- 强随机 JWT 密钥（`openssl rand -base64 32`）
-- 允许的 CORS 域名
+### Docker 部署配置
+
+详见 `docker-compose.yml`，三容器架构：
+
+```
+db (MySQL 8.0)  ←── backend (Spring Boot)  ←── frontend (Nginx)
+  backend-net          backend-net + frontend-net     frontend-net
+```
+
+- 数据库不对外暴露端口，仅 backend 可通过 Docker 内部网络访问
+- backend 同时位于 backend-net 和 frontend-net，实现跨网络通信
+- Nginx 配置了运行时 DNS 解析，启动不依赖后端容器就绪状态
+
+## 🔐 安全架构
+
+- **JWT 双 Token**：Access Token（15分钟，localStorage）+ Refresh Token（7天，httpOnly Cookie）
+- **Cookie 安全属性**：httpOnly、SameSite=Strict、Path=/api/auth
+- **BCrypt 密码加密**：强度 12
+- **登录失败锁定**：5 次连续失败锁定 30 分钟
+- **请求限流**：通用 API 120 次/分钟，登录接口 10 次/分钟 + 30 次/小时
+- **CORS 白名单**：仅允许配置的域名跨域访问
+- **统一异常处理**：不暴露内部错误细节
 
 ## 📜 许可证
 
