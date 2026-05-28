@@ -1,11 +1,11 @@
 # 后端
-backend/target/
+# 注意：不排除 backend/target/，Dockerfile.backend 需要 COPY 预构建 JAR
 backend/*.log
 backend/.env
 
 # 前端
+# 注意：不排除 frontend/dist/，Dockerfile.frontend 需要 COPY 预构建 dist
 frontend/node_modules/
-frontend/dist/
 frontend/.vite/
 
 # IDE
