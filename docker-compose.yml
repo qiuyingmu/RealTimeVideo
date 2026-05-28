@@ -50,6 +50,7 @@ services:
       - "8080:8080"
     networks:
       - backend-net
+      - frontend-net
 
   # ======================== Nginx 前端 ========================
   frontend:
