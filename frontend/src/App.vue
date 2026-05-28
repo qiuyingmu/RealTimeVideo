@@ -30,6 +30,9 @@
         </transition>
       </router-view>
     </main>
+
+    <!-- 全局 Toast / 确认弹窗 -->
+    <GlobalToast />
   </div>
 </template>
 
@@ -37,6 +40,7 @@
 import { computed, onMounted } from 'vue'
 import { useAuthStore } from '@/store/auth'
 import { useRouter, useRoute } from 'vue-router'
+import GlobalToast from '@/components/GlobalToast.vue'
 
 const authStore = useAuthStore()
 const router = useRouter()

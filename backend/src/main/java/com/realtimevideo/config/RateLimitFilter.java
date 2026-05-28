@@ -1,5 +1,6 @@
 package com.realtimevideo.config;
 
+import com.realtimevideo.dto.ApiResponse;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
 import io.github.bucket4j.Refill;
@@ -72,12 +73,11 @@ public class RateLimitFilter implements Filter {
         if (bucket.tryConsume(1)) {
             filterChain.doFilter(request, response);
         } else {
-            response.setStatus(429);
-            response.setContentType("application/json;charset=UTF-8");
             int retryAfter = isLogin ? 6 : 1;
             response.setHeader("Retry-After", String.valueOf(retryAfter));
-            response.getWriter().write(
-                    "{\"success\":false,\"message\":\"请求过于频繁，请稍后再试\",\"retryAfter\":" + retryAfter + "}");
+            ApiResponse.writeError(response, 429,
+                    "请求过于频繁，请稍后再试",
+                    Map.of("retryAfter", retryAfter));
         }
     }
 

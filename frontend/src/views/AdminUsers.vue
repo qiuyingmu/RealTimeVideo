@@ -54,9 +54,9 @@
             <td class="cell-username">{{ user.username }}</td>
             <td>{{ user.displayName || '-' }}</td>
             <td>
-              <span class="role-badge" :class="user.role === 'ROLE_ADMIN' ? 'admin' : 'user'">
+              <div class="role-badge" :class="user.role === 'ROLE_ADMIN' ? 'admin' : 'user'">
                 {{ user.role === 'ROLE_ADMIN' ? '管理员' : '普通用户' }}
-              </span>
+              </div>
             </td>
             <td>
               <span class="status-badge" :class="user.enabled ? 'enabled' : 'disabled'">
@@ -477,7 +477,7 @@ html.dark .btn-back:active {
 .cell-time {
   font-size: 12px;
   color: var(--text-secondary);
-  white-space: nowrap;
+  /* white-space: nowrap; */
 }
 
 .cell-attempts .danger {

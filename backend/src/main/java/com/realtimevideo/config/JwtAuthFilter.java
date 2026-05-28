@@ -1,5 +1,6 @@
 package com.realtimevideo.config;
 
+import com.realtimevideo.dto.ApiResponse;
 import com.realtimevideo.service.JwtService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -28,7 +29,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     private static final List<String> PUBLIC_PATHS = List.of(
             "/api/auth/login",
             "/api/auth/refresh",
-            "/api/auth/logout",
             "/api/health",
             "/h2-console/**",
             "/error"
@@ -51,34 +51,26 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         String token = extractTokenFromHeader(request);
 
         if (token == null) {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.setContentType("application/json;charset=UTF-8");
-            response.getWriter().write("{\"success\":false,\"message\":\"未提供认证令牌\"}");
+            ApiResponse.writeError(response, HttpServletResponse.SC_UNAUTHORIZED, "未提供认证令牌");
             return;
         }
 
         // 检查是否在黑名单中
         if (jwtService.isTokenBlacklisted(token)) {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.setContentType("application/json;charset=UTF-8");
-            response.getWriter().write("{\"success\":false,\"message\":\"令牌已失效，请重新登录\"}");
+            ApiResponse.writeError(response, HttpServletResponse.SC_UNAUTHORIZED, "令牌已失效，请重新登录");
             return;
         }
 
         // 验证Token
         if (!jwtService.validateToken(token)) {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.setContentType("application/json;charset=UTF-8");
-            response.getWriter().write("{\"success\":false,\"message\":\"令牌无效或已过期\"}");
+            ApiResponse.writeError(response, HttpServletResponse.SC_UNAUTHORIZED, "令牌无效或已过期");
             return;
         }
 
         // 确认是Access Token
         String tokenType = jwtService.extractTokenType(token);
         if (!"access".equals(tokenType)) {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.setContentType("application/json;charset=UTF-8");
-            response.getWriter().write("{\"success\":false,\"message\":\"无效的令牌类型\"}");
+            ApiResponse.writeError(response, HttpServletResponse.SC_UNAUTHORIZED, "无效的令牌类型");
             return;
         }
 

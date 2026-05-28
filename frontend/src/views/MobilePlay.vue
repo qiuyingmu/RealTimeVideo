@@ -66,7 +66,7 @@
     </div>
 
     <!-- 播放器容器（EZUIKit pcLive 模板：全屏视频 + 右侧悬浮控件栏） -->
-    <div id="ezuikit-player" class="ezuikit-player" v-show="!error"></div>
+    <div id="ezuikitPlayerId" class="ezuikit-player" v-show="!error"></div>
 
     <!-- 网速指示器 -->
     <div v-if="initialized && !isSwitchingQuality && !isRetrying && !isSwitchingChannel" class="network-indicator" :class="networkQuality">
@@ -75,7 +75,7 @@
     </div>
 
     <!-- ====== 频道切换导航按钮（pcLive 模板不提供此功能） ====== -->
-    <div v-if="initialized && !isSwitchingChannel" class="channel-nav-overlay">
+    <div v-if="false" class="channel-nav-overlay">
       <button class="ch-nav-btn ch-nav-left" @click.stop="emitPrevChannel" aria-label="上一个通道">
         <svg viewBox="0 0 24 24" width="22" height="22"><polyline points="15 18 9 12 15 6" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
@@ -250,10 +250,11 @@ function createPlayer() {
   // 统一使用 pcLive 模板（右侧控制面板），兼容桌面和移动端横屏。
   // mobileLive 模板在移动端竖屏模式下画面过小，清晰度严重受损。
   // pcLive 提供全屏视频 + 右侧悬浮控件，移动端配合横屏锁定效果最佳。
-  const playerTemplate = 'pcLive'
-
+  const playerTemplate = 'mobileLive'
+  var width = document.documentElement.clientWidth;
+  var height = document.documentElement.clientWidth * 9 / 10;
   playerInstance = new EZUIKit.EZUIKitPlayer({
-    id: 'ezuikit-player',
+    id: 'ezuikitPlayerId',
     accessToken: currentToken,
     url: playUrl.value,
     template: playerTemplate,          // pcLive 模板：全屏视频 + 右侧悬浮控件栏
@@ -261,16 +262,16 @@ function createPlayer() {
     staticPath: '/ezuikit_cdn',
     scaleMode: scaleMode.value,          // 从 localStorage 读取用户偏好的缩放模式
     audio: 0,
-    width: '100%',
-    height: '100%',
+    width: width,
+    height: height,
     // 从用户偏好读取画质。SDK 内部使用数字等级（0=流畅, 1=标清, 2=高清），
     // 传入字符串 'hd' 会导致 setVideoLevel 内部 parseInt('hd') = NaN。
     videoLevel: parseInt(localStorage.getItem('videoQuality') || '2', 10),
-    videoLevelList: [
-      { value: 'hd', name: '高清' },
-      { value: 'sd', name: '标清' },
-      { value: 'fluent', name: '流畅' }
-    ],
+    // videoLevelList: [
+    //   { value: 'hd', name: '高清' },
+    //   { value: 'sd', name: '标清' },
+    //   { value: 'fluent', name: '流畅' }
+    // ],
     mobileExtendOptions: {
       controls: ['fullScreen', 'hdSwitch'],   // 移除原生 ptzControl，使用自建底部 PTZ 面板
       showClose: false,

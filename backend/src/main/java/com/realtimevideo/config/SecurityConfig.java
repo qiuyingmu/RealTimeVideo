@@ -1,5 +1,6 @@
 package com.realtimevideo.config;
 
+import com.realtimevideo.dto.ApiResponse;
 import com.realtimevideo.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -45,7 +46,6 @@ public class SecurityConfig {
                     // 公开端点
                     .requestMatchers("/api/auth/login").permitAll()
                     .requestMatchers("/api/auth/refresh").permitAll()
-                    .requestMatchers("/api/auth/logout").permitAll()
                     .requestMatchers("/api/health").permitAll()
                     // H2 Console（仅开发环境，prod profile 已禁用 H2）
                     .requestMatchers("/h2-console/**").permitAll()
@@ -60,20 +60,10 @@ public class SecurityConfig {
 
             // 异常处理
             .exceptionHandling(ex -> ex
-                    .authenticationEntryPoint((request, response, authException) -> {
-                        response.setStatus(401);
-                        response.setContentType("application/json;charset=UTF-8");
-                        response.getWriter().write(
-                                "{\"success\":false,\"message\":\"未授权，请先登录\"}"
-                        );
-                    })
-                    .accessDeniedHandler((request, response, accessDeniedException) -> {
-                        response.setStatus(403);
-                        response.setContentType("application/json;charset=UTF-8");
-                        response.getWriter().write(
-                                "{\"success\":false,\"message\":\"权限不足，拒绝访问\"}"
-                        );
-                    })
+                    .authenticationEntryPoint((request, response, authException) ->
+                            ApiResponse.writeError(response, 401, "未授权，请先登录"))
+                    .accessDeniedHandler((request, response, accessDeniedException) ->
+                            ApiResponse.writeError(response, 403, "权限不足，拒绝访问"))
             )
 
             // 添加JWT过滤器

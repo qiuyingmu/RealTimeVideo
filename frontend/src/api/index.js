@@ -57,19 +57,18 @@ api.interceptors.response.use(
       isRefreshing = true
 
       const authStore = useAuthStore()
-      if (!authStore.refreshToken) {
+      if (!authStore.accessToken) {
         authStore.logout()
         isRefreshing = false
         return Promise.reject(normalizeError(error))
       }
 
       try {
-        const response = await axios.post('/api/auth/refresh', {
-          refreshToken: authStore.refreshToken
-        })
+        // refreshToken 通过 httpOnly Cookie 自动携带，无需在请求体中发送
+        const response = await axios.post('/api/auth/refresh')
 
-        const { accessToken, refreshToken } = response.data.data
-        authStore.setTokens(accessToken, refreshToken)
+        const { accessToken } = response.data.data
+        authStore.setTokens(accessToken)
 
         processQueue(null, accessToken)
         originalRequest.headers.Authorization = `Bearer ${accessToken}`
@@ -149,11 +148,11 @@ export const authApi = {
   login: (username, password) =>
     api.post('/auth/login', { username, password }),
 
-  refresh: (refreshToken) =>
-    api.post('/auth/refresh', { refreshToken }),
+  refresh: () =>
+    api.post('/auth/refresh'),
 
-  logout: (refreshToken) =>
-    api.post('/auth/logout', { refreshToken }),
+  logout: () =>
+    api.post('/auth/logout'),
 
   me: () =>
     api.get('/auth/me')

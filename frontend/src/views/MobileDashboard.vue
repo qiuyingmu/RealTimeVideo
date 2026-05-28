@@ -30,10 +30,10 @@
           class="device-group"
         >
           <!-- 设备头部 -->
-          <div class="device-group-header" @click="group.expanded = !group.expanded">
+          <div class="device-group-header" @click="expandedHande(group)">
             <svg
               class="group-arrow"
-              :class="{ expanded: group.expanded }"
+              :class="{ expanded: isExpanded(group) }"
               viewBox="0 0 24 24"
               width="18" height="18"
             >
@@ -52,7 +52,7 @@
           </div>
 
           <!-- 通道列表 -->
-          <div v-show="group.expanded" class="group-channels">
+          <div v-show="isExpanded(group)" class="group-channels">
             <div
               v-for="ch in group.channels"
               :key="ch.deviceSerial + '-' + ch.channelNo"
@@ -99,7 +99,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted,reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/store/auth'
 import { ezvizApi } from '@/api'
@@ -111,6 +111,7 @@ const channels = ref([])
 const loading = ref(true)
 const searchQuery = ref('')
 let refreshInterval = null
+const expandedMap = reactive({})
 
 // 按设备分组（同 Dashboard.vue 逻辑）
 const deviceGroups = computed(() => {
@@ -151,7 +152,7 @@ const filteredGroups = computed(() => {
   const q = searchQuery.value.toLowerCase()
   return deviceGroups.value.map(g => ({
     ...g,
-    expanded: true,
+    expanded: isExpanded(g),
     channels: g.channels.filter(ch =>
       (ch.channelName || '').toLowerCase().includes(q) ||
       String(ch.channelNo).includes(q) ||
@@ -186,6 +187,15 @@ async function refreshChannels() {
   } finally {
     loading.value = false
   }
+}
+
+function expandedHande(group) {
+  const key = group.deviceSerial
+  expandedMap[key] = !(expandedMap[key] ?? true)
+}
+
+function isExpanded(group) {
+  return expandedMap[group.deviceSerial] ?? true
 }
 
 onMounted(async () => {

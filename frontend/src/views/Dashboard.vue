@@ -55,31 +55,31 @@
           :key="group.deviceSerial"
           class="tree-group"
         >
-          <div class="tree-group-header" @click="group.expanded = !group.expanded">
+          <div class="tree-group-header" @click="expandedHande(group)">
             <svg
               class="arrow-icon"
-              :class="{ expanded: group.expanded }"
+              :class="{ expanded: isExpanded(group) }"
               viewBox="0 0 24 24"
               width="16" height="16"
             >
               <polyline points="9 18 15 12 9 6" fill="none" stroke="currentColor" stroke-width="2"/>
             </svg>
-            <span class="group-name" :title="group.deviceName">{{ group.deviceName }}</span>
+            <span class="group-name">{{ group.deviceName }}</span>
             <span class="group-badge" :class="group.hasOnline ? 'online' : 'offline'">
               {{ group.channels.length }}
             </span>
           </div>
 
-          <div v-show="group.expanded" class="tree-channels">
+          <div v-show="isExpanded(group)" class="tree-channels">
             <div
               v-for="ch in group.channels"
               :key="ch.id"
               class="tree-channel"
-              :class="{ active: selectedChannel?.id === ch.id, 'offline-item': ch.status !== 'online' }"
+              :class="{ active: selectedChannel?.id === ch.id }"
               @click="selectChannel(ch)"
             >
               <span class="ch-status-dot" :class="ch.status"></span>
-              <span class="ch-name" :title="ch.channelName || '通道' + ch.channelNo">{{ ch.channelName || '通道' + ch.channelNo }}</span>
+              <span class="ch-name">{{ ch.channelName || '通道' + ch.channelNo }}</span>
               <span class="ch-no">CH{{ ch.channelNo }}</span>
             </div>
           </div>
@@ -152,9 +152,10 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, nextTick, defineAsyncComponent } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, defineAsyncComponent ,reactive} from 'vue'
 import { useAuthStore } from '@/store/auth'
 import { ezvizApi } from '@/api'
+import { toast, confirm } from '@/composables/useToast'
 
 const VideoPlayer = defineAsyncComponent(() => import('@/components/VideoPlayer.vue'))
 
@@ -167,6 +168,7 @@ const selectedChannel = ref(null)
 const searchQuery = ref('')
 const videoContainer = ref(null)
 const sidebarOpen = ref(false)
+const expandedMap = reactive({})
 
 // ---- EZVIZ Token 缓存（全局共享，跨组件） ----
 const ezvizToken = ref(null)
@@ -239,7 +241,7 @@ const filteredGroups = computed(() => {
   const q = searchQuery.value.toLowerCase()
   return deviceGroups.value.map(g => ({
     ...g,
-    expanded: true,
+    expanded: isExpanded(g),
     channels: g.channels.filter(ch =>
       (ch.channelName || '').toLowerCase().includes(q) ||
       String(ch.channelNo).includes(q) ||
@@ -270,6 +272,15 @@ function selectFirstOnline() {
   if (deviceGroups.value.length > 0 && deviceGroups.value[0].channels.length > 0) {
     selectChannel(deviceGroups.value[0].channels[0])
   }
+}
+
+function expandedHande(group) {
+  const key = group.deviceSerial
+  expandedMap[key] = !(expandedMap[key] ?? true)
+}
+
+function isExpanded(group) {
+  return expandedMap[group.deviceSerial] ?? true
 }
 
 function selectChannel(ch) {
@@ -333,13 +344,14 @@ async function refreshChannels() {
 
 /** 开启所有通道的 PTZ 云台控制 */
 async function enablePtzAll() {
-  if (!confirm('确定开启所有通道的云台控制(PTZ)功能吗？')) return
+  const ok = await confirm('确定开启所有通道的云台控制(PTZ)功能吗？')
+  if (!ok) return
   try {
     const res = await ezvizApi.enableAllPtz()
-    alert(res.data.message)
+    toast.success(res.data.message)
     await refreshChannels()
   } catch (err) {
-    alert('操作失败: ' + (err.friendlyMessage || '请重试'))
+    toast.error('操作失败: ' + (err.friendlyMessage || '请重试'))
   }
 }
 
@@ -433,9 +445,9 @@ async function syncFromEzviz() {
   try {
     const response = await ezvizApi.syncDevices()
     await refreshChannels()
-    alert(response.data.message)
+    toast.success(response.data.message)
   } catch (err) {
-    alert('同步失败: ' + (err.friendlyMessage || '请重试'))
+    toast.error('同步失败: ' + (err.friendlyMessage || '请重试'))
   } finally {
     syncing.value = false
   }
