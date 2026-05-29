@@ -149,7 +149,7 @@
 </template>
 
 <script setup>
-import { reactive, ref, computed, onUnmounted } from 'vue'
+import { reactive, ref, computed, watch, onUnmounted, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/store/auth'
 import { authApi } from '@/api'
@@ -221,12 +221,12 @@ async function handleSubmit() {
     // 显示成功状态
     success.value = true
 
-    // 倒计时后跳转
+    // 使用 Vue watch 驱动导航（保证在响应式周期内触发）
     countdownTimer = setInterval(() => {
       countdown.value--
       if (countdown.value <= 0) {
         clearInterval(countdownTimer)
-        redirectToHome()
+        countdownTimer = null
       }
     }, 1000)
 
@@ -236,6 +236,13 @@ async function handleSubmit() {
     loading.value = false
   }
 }
+
+// watch countdown：在 Vue 响应式周期内触发导航，避免 setInterval 回调中的路由问题
+watch(countdown, (val) => {
+  if (val <= 0 && success.value) {
+    nextTick(() => redirectToHome())
+  }
+})
 
 function redirectToHome() {
   if (window.innerWidth <= 768 || 'ontouchstart' in window) {
