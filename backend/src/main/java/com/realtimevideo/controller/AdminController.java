@@ -71,9 +71,9 @@ public class AdminController {
             @RequestBody Map<String, String> body,
             HttpServletRequest httpRequest) {
         String newPassword = body.get("newPassword");
-        if (newPassword == null || newPassword.length() < 8) {
+        if (newPassword == null || newPassword.length() < 6 || newPassword.length() > 18) {
             return ResponseEntity.badRequest()
-                    .body(ApiResponse.error("新密码长度不能少于8位"));
+                    .body(ApiResponse.error("新密码长度需在6-18位之间"));
         }
         userService.resetPassword(id, newPassword);
         User user = userService.getUserById(id);

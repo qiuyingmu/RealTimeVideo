@@ -14,9 +14,7 @@ public class CreateUserRequest {
     private String username;
 
     @NotBlank(message = "密码不能为空")
-    @Size(min = 8, max = 100, message = "密码长度需在8-100个字符之间")
-    @Pattern(regexp = "^(?=.*[a-zA-Z])(?=.*\\d).{8,}$",
-            message = "密码必须包含字母和数字，至少8位")
+    @Size(min = 6, max = 18, message = "密码长度需在6-18个字符之间")
     private String password;
 
     @Size(max = 100, message = "显示名称长度不能超过100个字符")
