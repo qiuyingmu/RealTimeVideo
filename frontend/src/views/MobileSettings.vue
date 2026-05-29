@@ -60,6 +60,24 @@
       </div>
     </div>
 
+    <!-- 账户安全 -->
+    <div class="settings-section">
+      <div class="section-header">账户安全</div>
+      <router-link to="/mobile/settings/change-password" class="settings-item link-item">
+        <div class="settings-item-left">
+          <svg viewBox="0 0 24 24" width="20" height="20" class="settings-icon">
+            <rect x="3" y="11" width="18" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4" fill="none" stroke="currentColor" stroke-width="2"/>
+            <circle cx="12" cy="16" r="1" fill="currentColor"/>
+          </svg>
+          <span>修改密码</span>
+        </div>
+        <svg viewBox="0 0 24 24" width="16" height="16" class="chevron">
+          <polyline points="9 18 15 12 9 6" fill="none" stroke="currentColor" stroke-width="2"/>
+        </svg>
+      </router-link>
+    </div>
+
     <!-- 后台管理（仅管理员可见） -->
     <div v-if="authStore.isAdmin" class="settings-section">
       <div class="section-header">后台管理</div>
