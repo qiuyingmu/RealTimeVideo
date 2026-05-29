@@ -149,7 +149,7 @@
 </template>
 
 <script setup>
-import { reactive, ref, computed, watch, onUnmounted, nextTick } from 'vue'
+import { reactive, ref, computed, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/store/auth'
 import { authApi } from '@/api'
@@ -221,14 +221,15 @@ async function handleSubmit() {
     // 显示成功状态
     success.value = true
 
-    // 使用 Vue watch 驱动导航（保证在响应式周期内触发）
+    // 倒计时显示（每隔 1 秒更新）
     countdownTimer = setInterval(() => {
       countdown.value--
-      if (countdown.value <= 0) {
-        clearInterval(countdownTimer)
-        countdownTimer = null
-      }
     }, 1000)
+
+    // 3 秒后用 setTimeout 统一跳转（独立于组件生命周期）
+    setTimeout(() => {
+      redirectToHome()
+    }, 3000)
 
   } catch (error) {
     errorMessage.value = error.friendlyMessage || '密码修改失败，请重试'
@@ -236,13 +237,6 @@ async function handleSubmit() {
     loading.value = false
   }
 }
-
-// watch countdown：在 Vue 响应式周期内触发导航，避免 setInterval 回调中的路由问题
-watch(countdown, (val) => {
-  if (val <= 0 && success.value) {
-    nextTick(() => redirectToHome())
-  }
-})
 
 function redirectToHome() {
   if (window.innerWidth <= 768 || 'ontouchstart' in window) {
@@ -253,6 +247,11 @@ function redirectToHome() {
 }
 
 onUnmounted(() => {
+  if (countdownTimer) clearInterval(countdownTimer)
+})
+
+// 监听路由变化：如果用户在倒计时期间手动跳转（点击导航栏），清理定时器
+router.afterEach(() => {
   if (countdownTimer) clearInterval(countdownTimer)
 })
 </script>

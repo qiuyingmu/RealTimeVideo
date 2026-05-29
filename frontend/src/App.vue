@@ -25,11 +25,7 @@
 
     <!-- 主内容区域 -->
     <main :class="{ 'with-nav': authStore.isAuthenticated && !isMobileRoute, 'mobile-route': isMobileRoute }">
-      <router-view v-slot="{ Component }">
-        <transition name="fade" mode="out-in">
-          <component :is="Component" />
-        </transition>
-      </router-view>
+      <router-view />
     </main>
 
     <!-- SweetAlert2 自动管理 Toast/确认弹窗的 DOM -->
