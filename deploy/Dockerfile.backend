@@ -1,14 +1,4 @@
-# ====================== 编译阶段 ======================
-FROM maven:3.9-eclipse-temurin-17 AS builder
-
-WORKDIR /build
-COPY backend/pom.xml .
-RUN mvn dependency:go-offline -B
-
-COPY backend/src ./src
-RUN mvn clean package -DskipTests -B
-
-# ====================== 运行阶段 ======================
+# 使用本地预构建的 JAR，跳过 Maven 编译阶段
 FROM eclipse-temurin:17-jre-alpine
 
 WORKDIR /app
@@ -18,7 +8,8 @@ RUN apk add --no-cache tzdata && \
     cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
     echo "Asia/Shanghai" > /etc/timezone
 
-COPY --from=builder /build/target/realtime-video-backend-1.0.0.jar app.jar
+# 直接从 build context 的 backend/target 复制预构建的 JAR
+COPY backend/target/realtime-video-backend-1.0.0.jar app.jar
 
 EXPOSE 8080
 
