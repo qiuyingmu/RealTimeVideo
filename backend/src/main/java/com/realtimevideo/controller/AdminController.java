@@ -16,6 +16,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -120,6 +121,7 @@ public class AdminController {
      * body: {"deviceSerials": ["serial1", "serial2"]}
      */
     @PutMapping("/permissions/user/{userId}")
+    @Transactional
     public ResponseEntity<ApiResponse<List<UserDevicePermission>>> setUserPermissions(
             @PathVariable Long userId,
             @RequestBody Map<String, List<String>> body,
