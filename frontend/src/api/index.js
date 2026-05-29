@@ -58,7 +58,7 @@ api.interceptors.response.use(
 
       const authStore = useAuthStore()
       if (!authStore.accessToken) {
-        authStore.logout()
+        // 未登录状态下的 401（如登录页输错密码），无需调用 logout
         isRefreshing = false
         return Promise.reject(normalizeError(error))
       }
