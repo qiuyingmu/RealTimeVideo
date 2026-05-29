@@ -23,4 +23,7 @@ public class LoginResponse {
     private String username;
     private String displayName;
     private String role;
+
+    /** 是否需要强制修改密码（首次登录） */
+    private boolean passwordChangeRequired;
 }

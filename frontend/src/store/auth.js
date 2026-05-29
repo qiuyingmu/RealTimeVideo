@@ -8,6 +8,7 @@ export const useAuthStore = defineStore('auth', () => {
   const username = ref(localStorage.getItem('username') || '')
   const displayName = ref(localStorage.getItem('displayName') || '')
   const userRole = ref(localStorage.getItem('userRole') || '')
+  const passwordChangeRequired = ref(false)
 
   // Getters
   const isAuthenticated = computed(() => !!accessToken.value)
@@ -35,6 +36,7 @@ export const useAuthStore = defineStore('auth', () => {
     // refreshToken 通过 httpOnly Cookie 自动下发，无需前端 JS 处理
     setTokens(data.accessToken)
     setUserInfo(data.username, data.displayName, data.role)
+    passwordChangeRequired.value = data.passwordChangeRequired || false
 
     return data
   }
@@ -52,6 +54,7 @@ export const useAuthStore = defineStore('auth', () => {
     username.value = ''
     displayName.value = ''
     userRole.value = ''
+    passwordChangeRequired.value = false
 
     localStorage.removeItem('accessToken')
     localStorage.removeItem('username')
@@ -64,6 +67,7 @@ export const useAuthStore = defineStore('auth', () => {
     username,
     displayName,
     userRole,
+    passwordChangeRequired,
     isAuthenticated,
     isAdmin,
     login,

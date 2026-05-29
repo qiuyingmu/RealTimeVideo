@@ -15,6 +15,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -66,6 +68,47 @@ public class AuthController {
         // 下发新的 refreshToken cookie（token rotation）
         addRefreshTokenCookie(httpResponse, response.getRefreshToken());
         return ResponseEntity.ok(ApiResponse.success("令牌刷新成功", response));
+    }
+
+    /**
+     * 修改密码（首次登录强制修改 / 用户自助修改）
+     *
+     * 验证旧密码 → 设置新密码（6~18 位）→ 签发新 Token
+     * 前端需校验 newPassword === confirmPassword
+     */
+    @PostMapping("/change-password")
+    public ResponseEntity<ApiResponse<LoginResponse>> changePassword(
+            @RequestBody Map<String, String> body,
+            HttpServletRequest httpRequest,
+            HttpServletResponse httpResponse) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
+
+        String oldPassword = body.get("oldPassword");
+        String newPassword = body.get("newPassword");
+        String confirmPassword = body.get("confirmPassword");
+
+        // 参数完整性校验
+        if (oldPassword == null || newPassword == null || confirmPassword == null) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("请填写所有密码字段"));
+        }
+
+        // 两次密码一致性校验（后端兜底）
+        if (!newPassword.equals(confirmPassword)) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("两次输入的新密码不一致"));
+        }
+
+        LoginResponse response = userService.changePassword(username, oldPassword, newPassword);
+
+        // 旧 refreshToken 失效，下发新 cookie
+        addRefreshTokenCookie(httpResponse, response.getRefreshToken());
+
+        auditLogService.log("CHANGE_PASSWORD", "user:" + username,
+                "用户修改密码", httpRequest);
+
+        return ResponseEntity.ok(ApiResponse.success("密码修改成功", response));
     }
 
     @PostMapping("/logout")

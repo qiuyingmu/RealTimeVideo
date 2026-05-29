@@ -15,6 +15,12 @@ const routes = [
     meta: { requiresAuth: false }
   },
   {
+    path: '/change-password',
+    name: 'ChangePassword',
+    component: () => import('@/views/ChangePassword.vue'),
+    meta: { requiresAuth: true, allowWhileRequiringChange: true }
+  },
+  {
     path: '/',
     name: 'Dashboard',
     component: () => import('@/views/Dashboard.vue'),
@@ -43,6 +49,12 @@ const routes = [
         path: 'settings',
         name: 'MobileSettings',
         component: () => import('@/views/MobileSettings.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
+        path: 'settings/change-password',
+        name: 'MobileChangePassword',
+        component: () => import('@/views/ChangePassword.vue'),
         meta: { requiresAuth: true }
       },
       // ---- 移动端管理后台（管理员可见） ----
@@ -95,7 +107,7 @@ const router = createRouter({
   routes
 })
 
-// 路由守卫 - 认证检查 + 移动端重定向
+// 路由守卫 - 认证检查 + 移动端重定向 + 强制改密
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
 
@@ -107,6 +119,15 @@ router.beforeEach((to, from, next) => {
   // 已登录用户访问登录页，重定向到首页
   if (to.name === 'Login' && authStore.isAuthenticated) {
     return next(isMobileDevice() ? { name: 'MobileDashboard' } : { name: 'Dashboard' })
+  }
+
+  // 强制修改密码（首次登录）：除改密页和登录页外，全部拦截
+  if (authStore.passwordChangeRequired &&
+      to.meta.requiresAuth &&
+      !to.meta.allowWhileRequiringChange &&
+      to.name !== 'ChangePassword' &&
+      to.name !== 'MobileChangePassword') {
+    return next({ name: 'ChangePassword' })
   }
 
   // 需要管理员权限的页面

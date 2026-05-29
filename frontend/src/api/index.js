@@ -154,6 +154,9 @@ export const authApi = {
   logout: () =>
     api.post('/auth/logout'),
 
+  changePassword: (data) =>
+    api.post('/auth/change-password', data),
+
   me: () =>
     api.get('/auth/me')
 }

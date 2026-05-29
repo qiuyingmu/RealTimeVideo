@@ -34,6 +34,7 @@ public class DataInitializer implements CommandLineRunner {
                     .accountNonLocked(true)
                     .credentialsNonExpired(true)
                     .failedLoginAttempts(0)
+                    .passwordChangeRequired(true)
                     .build();
             userRepository.save(admin);
             log.info("========================================");
@@ -59,6 +60,7 @@ public class DataInitializer implements CommandLineRunner {
                     .accountNonLocked(true)
                     .credentialsNonExpired(true)
                     .failedLoginAttempts(0)
+                    .passwordChangeRequired(true)
                     .build();
             userRepository.save(normalUser);
             log.info("示例普通用户已创建: user / User@123456");

@@ -30,6 +30,11 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
 
+    /** 密码最小长度 */
+    private static final int PASSWORD_MIN_LENGTH = 6;
+    /** 密码最大长度 */
+    private static final int PASSWORD_MAX_LENGTH = 18;
+
     @Value("${security.login.max-attempts:5}")
     private int maxLoginAttempts;
 
@@ -86,6 +91,7 @@ public class UserService {
                 .username(user.getUsername())
                 .displayName(user.getDisplayName())
                 .role(user.getRole().name())
+                .passwordChangeRequired(user.isPasswordChangeRequired())
                 .build();
     }
 
@@ -128,6 +134,61 @@ public class UserService {
                 .username(user.getUsername())
                 .displayName(user.getDisplayName())
                 .role(user.getRole().name())
+                .passwordChangeRequired(user.isPasswordChangeRequired())
+                .build();
+    }
+
+    /**
+     * 用户修改密码（首次登录强制修改 / 自助修改）
+     *
+     * @param username     当前登录用户名（从 SecurityContext 获取）
+     * @param oldPassword  旧密码
+     * @param newPassword  新密码（6~18 位，可纯数字）
+     */
+    @Transactional
+    public LoginResponse changePassword(String username, String oldPassword, String newPassword) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("用户不存在"));
+
+        // 验证旧密码
+        if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
+            log.warn("修改密码失败：用户 {} 旧密码错误", username);
+            throw new BadCredentialsException("当前密码错误");
+        }
+
+        // 验证新密码长度（6~18 位）
+        if (newPassword == null || newPassword.length() < PASSWORD_MIN_LENGTH || newPassword.length() > PASSWORD_MAX_LENGTH) {
+            throw new IllegalArgumentException("密码长度必须为 " + PASSWORD_MIN_LENGTH + "~" + PASSWORD_MAX_LENGTH + " 位");
+        }
+
+        // 旧密码和新密码不能相同
+        if (oldPassword.equals(newPassword)) {
+            throw new IllegalArgumentException("新密码不能与当前密码相同");
+        }
+
+        String encodedNewPassword = passwordEncoder.encode(newPassword);
+        userRepository.updatePassword(username, encodedNewPassword);
+
+        // 重置锁定状态
+        user.setAccountNonLocked(true);
+        user.setLockTime(null);
+        user.setFailedLoginAttempts(0);
+
+        log.info("用户 {} 密码修改成功", username);
+
+        // 生成新 Token（密码变了，签发新 Token 使旧 token 失效更安全）
+        String newAccessToken = jwtService.generateAccessToken(username, user.getRole().name());
+        String newRefreshToken = jwtService.generateRefreshToken(username);
+
+        return LoginResponse.builder()
+                .accessToken(newAccessToken)
+                .refreshToken(newRefreshToken)
+                .tokenType("Bearer")
+                .expiresIn(jwtService.getAccessTokenExpiration())
+                .username(user.getUsername())
+                .displayName(user.getDisplayName())
+                .role(user.getRole().name())
+                .passwordChangeRequired(false)
                 .build();
     }
 

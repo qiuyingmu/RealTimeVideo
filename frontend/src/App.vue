@@ -18,6 +18,7 @@
           <span v-if="authStore.isAdmin" class="role-badge admin">管理员</span>
           <span v-else class="role-badge user">用户</span>
         </div>
+        <router-link to="/change-password" class="nav-link btn-change-pwd">修改密码</router-link>
         <button class="btn-logout" @click="handleLogout">退出登录</button>
       </div>
     </nav>

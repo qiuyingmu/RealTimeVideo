@@ -67,6 +67,11 @@ public class User implements UserDetails {
     /** 锁定截止时间，null表示未锁定 */
     private LocalDateTime lockTime;
 
+    /** 首次登录是否必须修改密码（管理员创建的用户默认需要修改） */
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean passwordChangeRequired = true;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
