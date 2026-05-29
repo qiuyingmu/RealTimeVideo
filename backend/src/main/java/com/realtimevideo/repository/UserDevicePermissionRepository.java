@@ -2,6 +2,9 @@ package com.realtimevideo.repository;
 
 import com.realtimevideo.model.UserDevicePermission;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -15,9 +18,13 @@ public interface UserDevicePermissionRepository extends JpaRepository<UserDevice
 
     List<UserDevicePermission> findByDeviceSerial(String deviceSerial);
 
-    void deleteByUserIdAndDeviceSerial(Long userId, String deviceSerial);
+    @Modifying
+    @Query("DELETE FROM UserDevicePermission p WHERE p.userId = :userId AND p.deviceSerial = :deviceSerial")
+    void deleteByUserIdAndDeviceSerial(@Param("userId") Long userId, @Param("deviceSerial") String deviceSerial);
 
-    void deleteByUserId(Long userId);
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("DELETE FROM UserDevicePermission p WHERE p.userId = :userId")
+    void deleteByUserId(@Param("userId") Long userId);
 
     boolean existsByUserIdAndDeviceSerial(Long userId, String deviceSerial);
 
