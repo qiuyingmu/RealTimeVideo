@@ -202,6 +202,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { adminApi } from '@/api'
+import { toast, confirm } from '@/composables/useToast'
 
 const router = useRouter()
 const route = useRoute()
@@ -257,7 +258,7 @@ async function createUser() {
     createForm.role = 'ROLE_USER'
     await fetchUsers()
   } catch (err) {
-    alert('创建用户失败: ' + (err.friendlyMessage || '请重试'))
+    toast.error(err.friendlyMessage || '创建用户失败，请重试')
   } finally {
     creating.value = false
   }
@@ -265,12 +266,14 @@ async function createUser() {
 
 async function toggleEnabled(user) {
   const action = user.enabled ? '禁用' : '启用'
-  if (!confirm(`确定要${action}用户 "${user.username}" 吗？`)) return
+  const ok = await confirm(`确定要${action}用户 "${user.username}" 吗？`)
+  if (!ok) return
   try {
     await adminApi.toggleEnabled(user.id)
     await fetchUsers()
+    toast.success(`用户已${action}`)
   } catch (err) {
-    alert(`${action}用户失败: ` + (err.friendlyMessage || '请重试'))
+    toast.error(err.friendlyMessage || `${action}用户失败，请重试`)
   }
 }
 
@@ -280,14 +283,14 @@ function resetPassword(user) {
 }
 
 async function handleResetPassword() {
-  if (!newPassword.value || newPassword.value.length < 8) return
+  if (!newPassword.value || newPassword.value.length < 6 || newPassword.value.length > 18) return
   resetting.value = true
   try {
     await adminApi.resetPassword(resetPwdUser.value.id, newPassword.value)
     resetPwdUser.value = null
-    alert('密码重置成功')
+    toast.success('密码已重置')
   } catch (err) {
-    alert('重置密码失败: ' + (err.friendlyMessage || '请重试'))
+    toast.error(err.friendlyMessage || '重置密码失败，请重试')
   } finally {
     resetting.value = false
   }
@@ -295,15 +298,17 @@ async function handleResetPassword() {
 
 async function confirmDelete(user) {
   if (user.username === 'admin') {
-    alert('不能删除默认管理员账户')
+    toast.warning('不能删除默认管理员账户')
     return
   }
-  if (!confirm(`确定要删除用户 "${user.username}" 吗？此操作不可恢复。`)) return
+  const ok = await confirm(`确定要删除用户 "${user.username}" 吗？此操作不可恢复。`)
+  if (!ok) return
   try {
     await adminApi.deleteUser(user.id)
     await fetchUsers()
+    toast.success('用户已删除')
   } catch (err) {
-    alert('删除用户失败: ' + (err.friendlyMessage || '请重试'))
+    toast.error(err.friendlyMessage || '删除用户失败，请重试')
   }
 }
 
