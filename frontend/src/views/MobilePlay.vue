@@ -35,7 +35,7 @@
           <circle cx="25" cy="25" r="20" fill="none" stroke-width="3"/>
         </svg>
       </div>
-      <p class="loading-text">切换画质中...</p>
+      <p class="loading-text">正在适配...</p>
     </div>
 
     <!-- 正在重连 -->
@@ -90,9 +90,6 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { ezvizApi } from '@/api'
 import EZUIKit from 'ezuikit-js'
-
-// ====== 移入顶层作用域，用于 forceCanvasSize 定时器清理 ======
-let canvasResizeTimer = null
 
 const props = defineProps({
   channel: { type: Object, default: null },
@@ -159,6 +156,7 @@ let touchStartX = 0
 let touchStartY = 0
 let latestChannelId = '' // 用于判断 channel 是否真正变化
 let channelSwitchGen = 0  // 通道切换世代计数器，防止竞态
+let qualityUpgraded = false  // 是否已执行过画质升级切换
 
 const CONNECT_TIMEOUT = 30000
 const RETRY_BASE_DELAY = 1000
@@ -189,17 +187,12 @@ function checkNetworkQuality() {
 // ====== 播放地址 ======
 const playUrl = computed(() => {
   if (!activeChannel.value) return ''
-  // 移动端强制 HD 画质（保证清晰度最高的 URL 请求）
+  // 移动端强制 HD 画质
   const isMobileDevice = window.innerWidth <= 768 || 'ontouchstart' in window
   const quality = isMobileDevice ? 'hd' : (localStorage.getItem('videoQuality') || 'hd')
-  const url = `ezopen://open.ys7.com/${activeChannel.value.deviceSerial}/${activeChannel.value.channelNo}.${quality}.live`
-  if (import.meta.env.DEV) {
-    console.log('[VideoPlayer] URL:',
-      url,
-      '| deviceSerial:', activeChannel.value.deviceSerial,
-      '| chNo:', activeChannel.value.channelNo,
-      '| quality:', quality)
-  }
+  // 萤石云地址格式：高清带 .hd，其他画质（流畅）不带后缀
+  const qualitySuffix = quality === 'hd' ? '.hd' : ''
+  const url = `ezopen://open.ys7.com/${activeChannel.value.deviceSerial}/${activeChannel.value.channelNo}${qualitySuffix}.live`
   return url
 })
 
@@ -245,23 +238,24 @@ function createPlayer() {
 
   loadStep.value = 3
 
-  const plugins = activeChannel.value && activeChannel.value.talkSupported ? ['talk'] : []
-
   // 统一使用 pcLive 模板（右侧控制面板），兼容桌面和移动端横屏。
   // mobileLive 模板在移动端竖屏模式下画面过小，清晰度严重受损。
   // pcLive 提供全屏视频 + 右侧悬浮控件，移动端配合横屏锁定效果最佳。
   const playerTemplate = 'mobileLive'
+  // 官方推荐：宽撑满，高按 16:9 比例
+  var width = document.documentElement.clientWidth;
+  var height = document.documentElement.clientWidth * 9 / 16;
   playerInstance = new EZUIKit.EZUIKitPlayer({
     id: 'ezuikitPlayerId',
     accessToken: currentToken,
     url: playUrl.value,
-    template: playerTemplate,
+    template: playerTemplate,          // pcLive 模板：全屏视频 + 右侧悬浮控件栏
     autoplay: true,
     staticPath: '/ezuikit_cdn',
-    scaleMode: scaleMode.value,
+    scaleMode: scaleMode.value,          // 从 localStorage 读取用户偏好的缩放模式
     audio: 0,
-    width: '100%',
-    height: '100%',
+    width: width,
+    height: height,
     // 从用户偏好读取画质。SDK 内部使用数字等级（0=流畅, 1=标清, 2=高清），
     // 传入字符串 'hd' 会导致 setVideoLevel 内部 parseInt('hd') = NaN。
     videoLevel: parseInt(localStorage.getItem('videoQuality') || '2', 10),
@@ -277,13 +271,20 @@ function createPlayer() {
       showPTZ: false,
     },
     handleSuccess: () => {
+      // 第一次 handleSuccess：不展示模糊视频，直接触发重建
+      if (!qualityUpgraded) {
+        qualityUpgraded = true
+        isSwitchingQuality.value = true
+        loading.value = true
+        if (playerInstance && typeof playerInstance.changePlayUrl === 'function') {
+          playerInstance.changePlayUrl(playUrl.value)
+        }
+        return
+      }
+      // 第二次 handleSuccess：重建完成，canvas 已适配容器
       clearLoadTimeout()
       initialized.value = true; loading.value = false; retryCount.value = 0
       isRetrying.value = false; isSwitchingQuality.value = false; isSwitchingChannel.value = false; loadStep.value = 0
-      // 确保播放器容器不被内部resize挤压
-      stabilizePlayerContainer()
-      // 强制修正 canvas 尺寸（移动端容器尺寸不稳定）
-      forceCanvasSize()
     },
     handleError: (err) => {
       clearLoadTimeout()
@@ -333,80 +334,6 @@ async function initPlayer() {
 
 function destroyPlayer() {
   destroyPlayerInstance()
-}
-
-// ====== 稳定播放器容器（防止被内部resize挤压） ======
-let resizeObserver = null
-
-function stabilizePlayerContainer() {
-  // 用ResizeObserver监控播放器内部DOM变化，防止EZUIKit内部缩放挤压父容器
-  const playerEl = document.getElementById('ezuikit-player')
-  if (!playerEl) return
-
-  // 如果有旧的observer先断开
-  if (resizeObserver) {
-    resizeObserver.disconnect()
-  }
-
-  resizeObserver = new ResizeObserver((entries) => {
-    for (const entry of entries) {
-      // 如果播放器内部元素试图缩小容器，锁定宽高
-      const wrapper = playerWrapperRef.value
-      if (wrapper) {
-        // 父容器保持100%占据，防止播放器内部autoresize缩小
-        const parent = wrapper.parentElement
-        if (parent) {
-          const parentRect = parent.getBoundingClientRect()
-          // 只有当父容器有合理尺寸时才设置flex-basis，防止干扰
-          if (parentRect.height > 100 && parentRect.width > 100) {
-            // 确保wrapper撑满父容器
-            wrapper.style.width = '100%'
-            wrapper.style.height = '100%'
-          }
-        }
-      }
-    }
-  })
-
-  // 监视播放器内部元素
-  resizeObserver.observe(playerEl)
-  // 也监视父容器
-  if (playerWrapperRef.value) {
-    resizeObserver.observe(playerWrapperRef.value)
-  }
-}
-
-// ====== 强制修正 canvas 尺寸 ======
-function forceCanvasSize() {
-  const container = document.getElementById('ezuikit-player')
-  if (!container) return
-
-  function resizeNow() {
-    const canvas = container.querySelector('canvas')
-    if (!canvas) return
-    const rect = container.getBoundingClientRect()
-    if (rect.width < 50 || rect.height < 50) return
-    const dpr = window.devicePixelRatio || 1
-    const cssW = Math.round(rect.width)
-    const cssH = Math.round(rect.height)
-    const bufW = Math.round(cssW * dpr)
-    const bufH = Math.round(cssH * dpr)
-    if (canvas.width !== bufW || canvas.height !== bufH) { canvas.width = bufW; canvas.height = bufH }
-    canvas.style.width = cssW + 'px'
-    canvas.style.height = cssH + 'px'
-    canvas.style.display = 'block'
-    canvas.style.position = 'absolute'
-    canvas.style.top = '0'
-    canvas.style.left = '0'
-    canvas.style.imageRendering = 'auto'
-  }
-
-  resizeNow()
-  let obs = null
-  try { obs = new MutationObserver(() => { resizeNow() }); obs.observe(container, { childList: true, subtree: true, attributes: true }) } catch (e) {}
-  let count = 0
-  if (canvasResizeTimer) clearInterval(canvasResizeTimer)
-  canvasResizeTimer = setInterval(() => { resizeNow(); if (++count > 50) { clearInterval(canvasResizeTimer); canvasResizeTimer = null } }, 200)
 }
 
 // ====== 全屏控制 ======
@@ -546,6 +473,7 @@ watch(activeChannel, (newChannel, oldChannel) => {
   const newId = newChannel.deviceSerial + '-' + newChannel.channelNo
   if (newId === latestChannelId) return
   latestChannelId = newId
+  qualityUpgraded = false  // 新通道需要重新升画质
 
   // 优雅切换：先标记切换状态（显示过渡覆盖层），再重建播放器
   isSwitchingChannel.value = true
@@ -589,10 +517,8 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  if (canvasResizeTimer) { clearInterval(canvasResizeTimer); canvasResizeTimer = null }
   if (networkMonitor) { clearInterval(networkMonitor); networkMonitor = null }
   clearTimeout(controlsHideTimer)
-  if (resizeObserver) { resizeObserver.disconnect(); resizeObserver = null }
   destroyPlayer()
 
   document.removeEventListener('fullscreenchange', onFullscreenChange)

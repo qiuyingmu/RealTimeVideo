@@ -168,10 +168,12 @@ function checkNetworkQuality() {
 
 // ====== 播放地址 ======
 const playUrl = computed(() => {
-  // 移动端强制 HD 画质（保证清晰度最高的 URL 请求）
+  // 移动端强制 HD 画质
   const isMobileDevice = window.innerWidth <= 768 || 'ontouchstart' in window
   const quality = isMobileDevice ? 'hd' : (localStorage.getItem('videoQuality') || 'hd')
-  const url = `ezopen://open.ys7.com/${props.channel.deviceSerial}/${props.channel.channelNo}.${quality}.live`
+  // 萤石云地址格式：高清带 .hd，其他画质（流畅）不带后缀
+  const qualitySuffix = quality === 'hd' ? '.hd' : ''
+  const url = `ezopen://open.ys7.com/${props.channel.deviceSerial}/${props.channel.channelNo}${qualitySuffix}.live`
   if (import.meta.env.DEV) {
     console.log('[VideoPlayer] URL:',
       url,
