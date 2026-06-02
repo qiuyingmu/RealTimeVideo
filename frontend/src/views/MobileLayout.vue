@@ -92,7 +92,8 @@ async function handleLogout() {
 .mobile-layout {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100dvh;
+  min-height: -webkit-fill-available;
   background: #f0f2f5;
   overflow: hidden;
 }
@@ -171,7 +172,7 @@ async function handleLogout() {
   background: #fff;
   border-top: 1px solid #e2e8f0;
   flex-shrink: 0;
-  padding-bottom: env(safe-area-inset-bottom, 0);
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 0px);
   z-index: 10;
 }
 
