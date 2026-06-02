@@ -251,19 +251,17 @@ function createPlayer() {
   // mobileLive 模板在移动端竖屏模式下画面过小，清晰度严重受损。
   // pcLive 提供全屏视频 + 右侧悬浮控件，移动端配合横屏锁定效果最佳。
   const playerTemplate = 'mobileLive'
-  var width = document.documentElement.clientWidth;
-  var height = document.documentElement.clientWidth * 9 / 10;
   playerInstance = new EZUIKit.EZUIKitPlayer({
     id: 'ezuikitPlayerId',
     accessToken: currentToken,
     url: playUrl.value,
-    template: playerTemplate,          // pcLive 模板：全屏视频 + 右侧悬浮控件栏
+    template: playerTemplate,
     autoplay: true,
     staticPath: '/ezuikit_cdn',
-    scaleMode: scaleMode.value,          // 从 localStorage 读取用户偏好的缩放模式
+    scaleMode: scaleMode.value,
     audio: 0,
-    width: width,
-    height: height,
+    width: '100%',
+    height: '100%',
     // 从用户偏好读取画质。SDK 内部使用数字等级（0=流畅, 1=标清, 2=高清），
     // 传入字符串 'hd' 会导致 setVideoLevel 内部 parseInt('hd') = NaN。
     videoLevel: parseInt(localStorage.getItem('videoQuality') || '2', 10),
