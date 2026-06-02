@@ -243,13 +243,13 @@ function createPlayer() {
     width: '100%',
     height: '100%',
     // 从用户偏好读取画质。SDK 内部使用数字等级（0=流畅, 1=标清, 2=高清），
-    // 注意：不能直接用 parseInt(localStorage值)，因为 'hd'→parseInt→NaN
-    videoLevel: ({ 'hd': 2, 'sd': 1, 'fluent': 0 })[localStorage.getItem('videoQuality')] ?? 2,
-    videoLevelList: [
-      { value: 2, name: '高清' },
-      { value: 1, name: '标清' },
-      { value: 0, name: '流畅' }
-    ],
+    // 传入字符串 'hd' 会导致 setVideoLevel 内部 parseInt('hd') = NaN。
+    videoLevel: parseInt(localStorage.getItem('videoQuality') || '2', 10),
+    // videoLevelList: [
+    //   { value: 'hd', name: '高清' },
+    //   { value: 'sd', name: '标清' },
+    //   { value: 'fluent', name: '流畅' }
+    // ],
     mobileExtendOptions: {
       controls: ['fullScreen', 'hdSwitch'],   // 移除原生 ptzControl，使用自建底部 PTZ 面板
       showClose: false,
