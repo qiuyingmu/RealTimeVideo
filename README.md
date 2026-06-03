@@ -185,6 +185,22 @@ bash deploy-server.sh
 
 > ⚠️ **安全提醒**：首次登录后请立即修改密码！
 
+### 运行测试
+
+```bash
+cd backend
+mvn test      # 运行后端单元测试
+```
+
+## 🔧 快速配置
+
+复制环境变量模板并填写：
+
+```bash
+cp .env.example .env
+# 编辑 .env 填入萤石云凭证和 JWT 密钥
+```
+
 ## 📦 技术栈
 
 | 层级 | 技术 | 版本 |
