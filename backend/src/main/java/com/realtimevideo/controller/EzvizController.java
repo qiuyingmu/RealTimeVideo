@@ -164,6 +164,12 @@ public class EzvizController {
         int direction = ((Number) request.get("direction")).intValue();
         int speed = request.containsKey("speed") ? ((Number) request.get("speed")).intValue() : 50;
 
+        // 权限检查
+        if (!hasDevicePermission(deviceSerial, authentication)) {
+            return ResponseEntity.status(403)
+                    .body(ApiResponse.error("无权控制该设备的 PTZ"));
+        }
+
         ezvizService.startPtz(deviceSerial, channelNo, direction, speed);
         auditLogService.log("PTZ_CONTROL", deviceSerial + "/CH" + channelNo,
                 "PTZ 开始: dir=" + direction + " speed=" + speed, httpRequest);
@@ -177,6 +183,12 @@ public class EzvizController {
             Authentication authentication) {
         String deviceSerial = (String) request.get("deviceSerial");
         int channelNo = ((Number) request.get("channelNo")).intValue();
+
+        // 权限检查
+        if (!hasDevicePermission(deviceSerial, authentication)) {
+            return ResponseEntity.status(403)
+                    .body(ApiResponse.error("无权控制该设备的 PTZ"));
+        }
 
         ezvizService.stopPtz(deviceSerial, channelNo);
         auditLogService.log("PTZ_CONTROL", deviceSerial + "/CH" + channelNo,
