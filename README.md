@@ -6,21 +6,31 @@
 
 ```
 实时视频监控平台
-├── backend/          # Spring Boot 后端 (Java 17)
-│   ├── config/       # 安全配置、CORS、JWT过滤器、限流器
-│   ├── controller/   # REST API 控制器
-│   ├── dto/          # 数据传输对象
-│   ├── model/        # 实体模型 (User/Device/Channel/OperationLog)
-│   ├── repository/   # JPA 数据访问层
-│   └── service/      # 业务逻辑层
-├── frontend/         # Vue 3 前端
+├── backend/                    # Spring Boot 后端 (Java 17)
+│   └── src/main/java/com/realtimevideo/
+│       ├── config/             # 安全配置、CORS、JWT过滤器、限流器
+│       ├── controller/         # REST API 控制器
+│       ├── dto/                # 数据传输对象
+│       ├── model/              # 实体模型 (User/Device/Channel/OperationLog)
+│       ├── repository/         # JPA 数据访问层
+│       └── service/            # 业务逻辑层
+├── frontend/                   # Vue 3 前端
 │   └── src/
-│       ├── api/      # Axios API 客户端
-│       ├── components/ # 可复用组件 (VideoPlayer/Toast)
-│       ├── router/   # Vue Router 路由配置
-│       ├── store/    # Pinia 状态管理
-│       └── views/    # 页面视图 (Login/Dashboard/Admin/Mobile)
-└── deploy/           # Docker 部署配置
+│       ├── api/                # Axios API 客户端
+│       ├── components/         # 可复用组件 (VideoPlayer/Toast)
+│       ├── composables/        # Vue 组合式函数 (useToast)
+│       ├── router/             # Vue Router 路由配置
+│       ├── store/              # Pinia 状态管理
+│       └── views/              # 页面视图 (桌面端 + 移动端)
+├── deploy/                     # Docker 部署配置
+│   ├── Dockerfile.backend      # 后端容器镜像
+│   ├── Dockerfile.frontend     # 前端容器镜像
+│   ├── nginx.conf              # Nginx 配置 (反向代理/WASM/SPA)
+│   ├── init.sql                # 数据库初始化脚本
+│   ├── build-package.sh        # 构建打包脚本
+│   └── deploy.sh               # 部署脚本
+├── deploy-server.sh            # 服务器一键部署
+└── docker-compose.yml          # 三容器编排 (MySQL + Backend + Nginx)
 ```
 
 ## 🏗️ 系统架构图
