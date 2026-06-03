@@ -169,6 +169,8 @@ export const ezvizApi = {
     api.post('/ezviz/sync-devices'),
   getAllChannels: () =>
     api.get('/ezviz/channels'),
+  refreshChannelStatus: () =>
+    api.get('/ezviz/channels/refresh-status'),
   getDeviceChannels: (deviceSerial) =>
     api.get(`/ezviz/devices/${deviceSerial}/channels`),
   enableAllPtz: () =>

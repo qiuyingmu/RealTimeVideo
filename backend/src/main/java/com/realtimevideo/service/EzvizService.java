@@ -384,6 +384,74 @@ public class EzvizService {
         }
     }
 
+    /**
+     * 轻量级刷新通道在线状态（无需管理员权限）
+     *
+     * 仅从萤石云 camera/list API 获取最新的 status 字段并更新数据库，
+     * 不修改通道名称、PTZ 支持等配置数据，不新增/删除通道。
+     */
+    public List<Channel> refreshChannelsStatus() {
+        String token = getAccessToken();
+        log.info("开始轻量刷新通道状态...");
+        long refreshCount = 0;
+
+        // 获取所有设备序列号
+        List<String> serials = channelRepository.findDistinctDeviceSerials();
+        if (serials.isEmpty()) {
+            log.warn("数据库无通道数据，无法刷新状态，请先执行全量同步");
+            return List.of();
+        }
+
+        for (String deviceSerial : serials) {
+            try {
+                MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
+                body.add("accessToken", token);
+                body.add("deviceSerial", deviceSerial);
+
+                HttpHeaders headers = new HttpHeaders();
+                headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+
+                @SuppressWarnings("unchecked")
+                Map<String, Object> response = restTemplate.postForObject(
+                        CAMERA_LIST_URL, new HttpEntity<>(body, headers), Map.class);
+
+                if (response == null || !"200".equals(String.valueOf(response.get("code")))) {
+                    log.warn("获取设备 {} 通道列表失败: {}",
+                            deviceSerial, response != null ? response.get("msg") : "无响应");
+                    continue;
+                }
+
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> cameraList =
+                        (List<Map<String, Object>>) response.get("data");
+                if (cameraList == null || cameraList.isEmpty()) continue;
+
+                for (Map<String, Object> cam : cameraList) {
+                    Integer channelNo = toIntOrNull(cam.get("channelNo"));
+                    if (channelNo == null) continue;
+
+                    int statusCode = ((Number) cam.getOrDefault("status", 0)).intValue();
+                    String status = switch (statusCode) {
+                        case 1 -> "online";
+                        case 2 -> "inactive";
+                        case 3 -> "sleep";
+                        default -> "offline";
+                    };
+
+                    int updated = channelRepository.updateStatus(
+                            deviceSerial, channelNo, status);
+                    if (updated > 0) refreshCount++;
+                }
+            } catch (Exception e) {
+                log.error("刷新设备 {} 状态失败: {}", deviceSerial, e.getMessage());
+            }
+        }
+
+        invalidateChannelsCache();
+        log.info("轻量刷新完成，共更新 {} 个通道状态", refreshCount);
+        return channelRepository.findAll();
+    }
+
     // ================================================================
     //  批量操作
     // ================================================================

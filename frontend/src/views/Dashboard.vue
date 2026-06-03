@@ -333,6 +333,9 @@ function goToNextChannel() {
 async function refreshChannels() {
   loading.value = true
   try {
+    // 先轻量刷新萤石云通道状态（所有人可用，只更新 status）
+    await ezvizApi.refreshChannelStatus().catch(() => {})
+    // 再加载最新的通道列表
     const response = await ezvizApi.getAllChannels()
     channels.value = response.data.data || []
   } catch (err) {

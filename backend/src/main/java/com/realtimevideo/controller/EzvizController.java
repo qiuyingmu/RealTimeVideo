@@ -82,6 +82,45 @@ public class EzvizController {
         return ResponseEntity.ok(ApiResponse.success(filtered));
     }
 
+    /**
+     * 轻量刷新通道在线状态（所有认证用户可调用）
+     *
+     * 仅从萤石云获取最新的 status，不修改设备/通道配置数据。
+     * 与 syncDevices() 不同——sync 是全量同步（仅管理员），
+     * 此接口只刷新状态（速度更快，对所有人开放）。
+     */
+    @GetMapping("/channels/refresh-status")
+    public ResponseEntity<ApiResponse<List<Channel>>> refreshChannelStatus(
+            Authentication authentication) {
+        if (authentication == null) {
+            return ResponseEntity.status(401)
+                    .body(ApiResponse.error("未认证"));
+        }
+        List<Channel> channels = ezvizService.refreshChannelsStatus();
+
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(a -> ADMIN_ROLE.equals(a.getAuthority()));
+
+        if (isAdmin) {
+            return ResponseEntity.ok(ApiResponse.success(channels));
+        }
+
+        // 普通用户只返回有权限的通道
+        String username = authentication.getName();
+        List<com.realtimevideo.model.UserDevicePermission> permissions =
+                permissionRepository.findByUsername(username);
+        if (permissions.isEmpty()) {
+            return ResponseEntity.ok(ApiResponse.success(List.of()));
+        }
+        Set<String> allowedSerials = permissions.stream()
+                .map(com.realtimevideo.model.UserDevicePermission::getDeviceSerial)
+                .collect(Collectors.toSet());
+        List<Channel> filtered = channels.stream()
+                .filter(ch -> allowedSerials.contains(ch.getDeviceSerial()))
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(ApiResponse.success(filtered));
+    }
+
     @GetMapping("/devices/{deviceSerial}/channels")
     public ResponseEntity<ApiResponse<List<Channel>>> getDeviceChannels(
             @PathVariable String deviceSerial,
