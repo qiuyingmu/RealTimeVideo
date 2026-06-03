@@ -299,6 +299,7 @@ public class EzvizService {
             // 在事务中执行删除+保存（确保 @Transactional 不被调用方使用时也能正常工作）
             transactionTemplate.execute(status -> {
                 channelRepository.deleteByDeviceSerial(deviceSerial);
+                channelRepository.flush();
                 channelRepository.saveAll(channels);
                 return null;
             });
