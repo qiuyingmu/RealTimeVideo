@@ -30,7 +30,19 @@ public class EzvizController {
     private static final String ADMIN_ROLE = "ROLE_ADMIN";
 
     @GetMapping("/token")
-    public ResponseEntity<ApiResponse<Map<String, String>>> getToken() {
+    public ResponseEntity<ApiResponse<Map<String, String>>> getToken(
+            Authentication authentication) {
+        // 非管理员用户：至少有一个设备权限才能获取播放 token
+        if (authentication != null && authentication.getAuthorities().stream()
+                .noneMatch(a -> ADMIN_ROLE.equals(a.getAuthority()))) {
+            String username = authentication.getName();
+            List<com.realtimevideo.model.UserDevicePermission> perms =
+                    permissionRepository.findByUsername(username);
+            if (perms.isEmpty()) {
+                return ResponseEntity.status(403)
+                        .body(ApiResponse.error("无权获取播放凭证：未授权任何设备"));
+            }
+        }
         Map<String, String> token = ezvizService.getEzvizToken();
         return ResponseEntity.ok(ApiResponse.success(token));
     }

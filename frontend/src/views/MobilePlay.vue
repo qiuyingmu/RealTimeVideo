@@ -496,13 +496,18 @@ onMounted(() => {
 
   // 页面模式（无 props.channel）：确保 sessionStorage 中有通道数据
   if (!props.channel && !localChannel.value) {
-    // 如果 activeChannel 不存在 -> 等待路由参数或显示错误
     error.value = '未选择播放通道'
     loading.value = false
     return
   }
 
-  initPlayer()
+  // 🔐 权限校验：从服务端验证用户对该通道有权限
+  if (!props.channel) {
+    verifyPermissionBeforePlay()
+  } else {
+    initPlayer()
+  }
+
   networkMonitor = setInterval(checkNetworkQuality, 30000)
 
   document.addEventListener('fullscreenchange', onFullscreenChange)
@@ -513,6 +518,35 @@ onMounted(() => {
   // 首次显示控制栏
   setTimeout(showControlsTemporarily, 1500)
 })
+
+/**
+ * 从服务端验证用户有权播放当前通道，通过后才播放
+ */
+async function verifyPermissionBeforePlay() {
+  loading.value = true
+  try {
+    // 从后端获取用户有权限的通道列表（已过滤权限）
+    const res = await ezvizApi.getAllChannels()
+    const allowedChannels = res.data.data || []
+
+    const ch = localChannel.value
+    const hasPermission = allowedChannels.some(c =>
+      c.deviceSerial === ch.deviceSerial && c.channelNo === ch.channelNo
+    )
+
+    if (!hasPermission) {
+      error.value = '无权播放该通道：请联系管理员授予设备权限'
+      loading.value = false
+      return
+    }
+  } catch (e) {
+    error.value = '权限校验失败，请刷新后重试'
+    loading.value = false
+    return
+  }
+
+  initPlayer()
+}
 
 onUnmounted(() => {
   if (networkMonitor) { clearInterval(networkMonitor); networkMonitor = null }
