@@ -43,9 +43,22 @@
         </button>
       </div>
 
-      <!-- 加载状态 -->
+      <!-- 加载状态：骨架屏 -->
       <div v-if="loading && channels.length === 0" class="sidebar-loading">
-        <div class="mini-spinner"></div>
+        <div v-for="n in 3" :key="'skel-group-' + n" class="skeleton-group">
+          <div class="skeleton-group-header">
+            <div class="skel-arrow"></div>
+            <div class="skel-line skel-name"></div>
+            <div class="skel-badge"></div>
+          </div>
+          <div class="skeleton-channels">
+            <div v-for="m in (n === 1 ? 3 : 2)" :key="'skel-ch-' + n + '-' + m" class="skeleton-channel">
+              <div class="skel-dot"></div>
+              <div class="skel-line skel-ch-name"></div>
+              <div class="skel-line skel-ch-no"></div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- 设备树 -->
@@ -568,20 +581,81 @@ async function syncFromEzviz() {
 }
 
 .sidebar-loading {
+  padding: 12px 16px;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 40px;
+  flex-direction: column;
+  gap: 20px;
 }
 
-.mini-spinner {
-  width: 24px;
-  height: 24px;
-  border: 2px solid var(--border);
-  border-top-color: var(--primary);
-  border-radius: 50%;
-  animation: spin 0.6s linear infinite;
+/* 骨架屏动画 */
+@keyframes skel-pulse {
+  0% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+  100% { opacity: 0.4; }
 }
+
+.skeleton-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.skeleton-group-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.skel-arrow {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  background: var(--border, #e2e8f0);
+  animation: skel-pulse 1.8s ease-in-out infinite;
+}
+
+.skel-line {
+  height: 12px;
+  border-radius: 6px;
+  background: var(--border, #e2e8f0);
+  animation: skel-pulse 1.8s ease-in-out infinite;
+}
+
+.skel-name { flex: 1; max-width: 140px; }
+
+.skel-badge {
+  width: 24px;
+  height: 16px;
+  border-radius: 8px;
+  background: var(--border, #e2e8f0);
+  animation: skel-pulse 1.8s ease-in-out infinite;
+}
+
+.skeleton-channels {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-left: 24px;
+}
+
+.skeleton-channel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+}
+
+.skel-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--border, #e2e8f0);
+  animation: skel-pulse 1.8s ease-in-out infinite;
+}
+
+.skel-ch-name { flex: 1; max-width: 120px; }
+.skel-ch-no { width: 30px; }
 
 .sidebar-empty {
   padding: 40px 20px;
