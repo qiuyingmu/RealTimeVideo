@@ -2,9 +2,11 @@ package com.realtimevideo.controller;
 
 import com.realtimevideo.dto.ApiResponse;
 import com.realtimevideo.dto.CreateUserRequest;
+import com.realtimevideo.model.Device;
 import com.realtimevideo.model.OperationLog;
 import com.realtimevideo.model.User;
 import com.realtimevideo.model.UserDevicePermission;
+import com.realtimevideo.repository.DeviceRepository;
 import com.realtimevideo.repository.UserDevicePermissionRepository;
 import com.realtimevideo.service.AuditLogService;
 import com.realtimevideo.service.UserService;
@@ -32,6 +34,7 @@ public class AdminController {
     private final UserService userService;
     private final AuditLogService auditLogService;
     private final UserDevicePermissionRepository permissionRepository;
+    private final DeviceRepository deviceRepository;
 
     // ======================== 用户管理 ========================
 
@@ -144,7 +147,8 @@ public class AdminController {
                         .userId(userId)
                         .username(user.getUsername())
                         .deviceSerial(serial)
-                        .deviceName("") // 暂不填充，前端会展示
+                        .deviceName(deviceRepository.findByDeviceSerial(serial)
+                                .map(Device::getDeviceName).orElse(""))
                         .build())
                 .collect(Collectors.toList());
         permissionRepository.saveAll(newPermissions);

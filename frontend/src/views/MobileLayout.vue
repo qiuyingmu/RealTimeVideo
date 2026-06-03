@@ -40,7 +40,7 @@
         </svg>
         <span class="tab-label">设备</span>
       </router-link>
-      <router-link to="/mobile/play" class="tab-item" :class="{ active: $route.path === '/mobile/play' }">
+      <router-link v-if="hasPlayableChannel" to="/mobile/play" class="tab-item" :class="{ active: $route.path === '/mobile/play' }">
         <svg viewBox="0 0 24 24" width="22" height="22">
           <polygon points="5 3 19 12 5 21 5 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
@@ -76,11 +76,24 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/store/auth'
 
 const router = useRouter()
 const authStore = useAuthStore()
+
+// 仅当 sessionStorage 中有通道数据时才显示"播放"Tab
+const hasPlayableChannel = computed(() => {
+  try {
+    const saved = sessionStorage.getItem('mobileSelectedChannel')
+    if (!saved) return false
+    const parsed = JSON.parse(saved)
+    return parsed && parsed.deviceSerial && parsed.channelNo != null
+  } catch {
+    return false
+  }
+})
 
 async function handleLogout() {
   await authStore.logout()
