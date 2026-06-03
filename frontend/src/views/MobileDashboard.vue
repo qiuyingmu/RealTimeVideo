@@ -13,6 +13,11 @@
           <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
         </svg>
       </button>
+      <button class="btn-header-refresh" :disabled="loading" @click="refreshChannels" title="刷新通道状态">
+        <svg viewBox="0 0 24 24" width="16" height="16" :class="{ spinning: loading }">
+          <path d="M21.5 2v6h-6M2.5 22v-6h6M2.5 16.5A10 10 0 0112 2c4.16 0 7.74 2.57 9.17 6.17M21.5 7.5A10 10 0 0112 22c-4.16 0-7.74-2.57-9.17-6.17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
     </div>
 
     <!-- 加载状态 -->
@@ -166,8 +171,8 @@ const filteredGroups = computed(() => {
 const adminActions = computed(() => {
   if (!authStore.isAdmin) return []
   return [{
-    label: '刷新设备列表',
-    handler: refreshChannels
+    label: '从萤石云同步',
+    handler: syncFromEzviz
   }]
 })
 
@@ -180,10 +185,25 @@ function selectAndPlay(ch) {
 async function refreshChannels() {
   loading.value = true
   try {
+    // 先轻量刷新在线状态
+    await ezvizApi.refreshChannelStatus().catch(() => {})
     const res = await ezvizApi.getAllChannels()
     channels.value = res.data.data || []
   } catch (e) {
     console.error('刷新通道失败', e)
+  } finally {
+    loading.value = false
+  }
+}
+
+async function syncFromEzviz() {
+  loading.value = true
+  try {
+    await ezvizApi.syncDevices()
+    const res = await ezvizApi.getAllChannels()
+    channels.value = res.data.data || []
+  } catch (e) {
+    console.error('同步失败', e)
   } finally {
     loading.value = false
   }
@@ -324,6 +344,31 @@ onUnmounted(() => {
 
 .search-clear:active {
   background: #f1f5f9;
+}
+
+.btn-header-refresh {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  color: #64748b;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+.btn-header-refresh:active {
+  background: #f1f5f9;
+  color: #1a73e8;
+}
+.btn-header-refresh:disabled {
+  opacity: 0.5;
+}
+.btn-header-refresh .spinning {
+  animation: spin 0.6s linear infinite;
 }
 
 /* 加载状态 */
