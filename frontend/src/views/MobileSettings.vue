@@ -162,7 +162,7 @@ const authStore = useAuthStore()
 
 const autoRefresh = ref(localStorage.getItem('mobileAutoRefresh') !== 'false')
 const darkMode = ref(localStorage.getItem('mobileDarkMode') === 'true')
-const videoQuality = ref(localStorage.getItem('videoQuality') || 'hd')
+const videoQuality = ref(localStorage.getItem('videoQuality') || 'fluent')
 
 // 挂载时应用已保存的夜间模式
 onMounted(() => {

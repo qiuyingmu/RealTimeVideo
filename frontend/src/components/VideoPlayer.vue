@@ -168,9 +168,7 @@ function checkNetworkQuality() {
 
 // ====== 播放地址 ======
 const playUrl = computed(() => {
-  // 移动端强制 HD 画质
-  const isMobileDevice = window.innerWidth <= 768 || 'ontouchstart' in window
-  const quality = isMobileDevice ? 'hd' : (localStorage.getItem('videoQuality') || 'hd')
+  const quality = localStorage.getItem('videoQuality') || 'fluent'
   // 萤石云地址格式：高清带 .hd，其他画质（流畅）不带后缀
   const qualitySuffix = quality === 'hd' ? '.hd' : ''
   const url = `ezopen://open.ys7.com/${props.channel.deviceSerial}/${props.channel.channelNo}${qualitySuffix}.live`
@@ -246,7 +244,7 @@ function createPlayer() {
     height: '100%',
     // 从用户偏好读取画质。SDK 内部使用数字等级（0=流畅, 1=标清, 2=高清），
     // 传入字符串 'hd' 会导致 setVideoLevel 内部 parseInt('hd') = NaN。
-    videoLevel: parseInt(localStorage.getItem('videoQuality') || '2', 10),
+    videoLevel: parseInt(localStorage.getItem('videoQuality') === 'hd' ? '2' : '1', 10),
     // videoLevelList: [
     //   { value: 'hd', name: '高清' },
     //   { value: 'sd', name: '标清' },
