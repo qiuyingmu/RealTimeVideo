@@ -26,7 +26,8 @@
 │   ├── Dockerfile.backend      # 后端容器镜像
 │   ├── Dockerfile.frontend     # 前端容器镜像
 │   ├── nginx.conf              # Nginx 配置（方式一用）
-│   ├── bt-nginx.conf           # 宝塔面板 Nginx 模板（方式二用）
+│   ├── bt-nginx.conf           # 宝塔面板 Nginx 模板（参考用）
+│   ├── bt-nginx-full.conf      # 宝塔面板完整配置（含 BT 默认规则）
 │   ├── init.sql                # 数据库初始化脚本
 │   ├── build-package.sh        # 构建打包脚本
 │   ├── deploy.sh               # 方式一部署脚本
@@ -202,27 +203,82 @@ BT Nginx (80/443)
 # 上传构建包到服务器，解压到 /opt/realtime-video
 cd /opt/realtime-video
 cp deploy/env.production .env
-# 编辑 .env 填入真实配置
+# 编辑 .env 填入萤石云凭证和 JWT 密钥
 vi .env
 
-# 启动后端（仅运行 db + backend，无端口冲突）
+# 启动后端（仅运行 db + backend，端口映射 127.0.0.1:8081）
 docker compose -p realtime-video -f docker-compose.backend-only.yml up -d --build
 ```
 
-**② 配置宝塔站点：**
+**② 宝塔面板新建站点：**
 
-1. 宝塔面板 → 网站 → **添加站点**（输入你的域名）
-2. 将 `frontend/dist/` 下的所有文件上传到站点根目录
-3. 站点设置 → 配置文件中，**替换为 `deploy/bt-nginx.conf` 的内容**
-   - 修改 `server_name` 和 `root` 路径
-4. （可选）开启 SSL
-
-```bash
-# 上传前端文件示例
-scp -r /path/to/realtime-video-build/frontend/dist/* root@服务器IP:/www/wwwroot/你的域名/
+```
+宝塔面板 → 网站 → 添加站点
+  ├── 域名：     输入你的域名
+  ├── 项目类型： 选「HTML项目」
+  └── 提交
 ```
 
-**③ 后续加新业务**：宝塔新建站点 → 新 Docker 项目（端口错开）→ BT Nginx 配 proxy_pass，互不干扰。
+提交后，将前端文件上传到站点根目录：
+
+```bash
+cp -r /opt/realtime-video/frontend/dist/* /www/wwwroot/你的域名/
+```
+
+**③ 配置 Nginx（关键步骤）：**
+
+> ⚠️ **不要**用 `deploy/bt-nginx.conf` 整个替换 BT 配置，会破坏 SSL 验证。
+
+正确做法：
+
+```
+宝塔 → 网站 → 你的域名 → 设置 → 配置文件
+```
+
+全选删除，粘贴 `deploy/bt-nginx-full.conf` 的内容（内置了 BT 默认规则 + RealTimeVideo 专用配置）。
+
+或者手动在 BT 默认配置末尾追加：
+
+```nginx
+# ====== RealTimeVideo 配置 ======
+location /api/ {
+    proxy_pass http://127.0.0.1:8081;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_connect_timeout 10s;
+    proxy_read_timeout 60s;
+    proxy_send_timeout 60s;
+}
+location ~ ^/ezuikit_cdn/.*\.wasm$ {
+    rewrite ^/ezuikit_cdn/(.*)$ /ezuikit_js/v9.0.5/ezuikit_static/$1 break;
+    proxy_pass https://openstatic.ys7.com;
+    proxy_set_header Host openstatic.ys7.com;
+    proxy_ssl_server_name on;
+    proxy_ssl_verify off;
+    proxy_hide_header Content-Type;
+    add_header Content-Type application/wasm;
+}
+location /ezuikit_cdn/ {
+    rewrite ^/ezuikit_cdn/(.*)$ /ezuikit_js/v9.0.5/ezuikit_static/$1 break;
+    proxy_pass https://openstatic.ys7.com;
+    proxy_set_header Host openstatic.ys7.com;
+    proxy_ssl_server_name on;
+    proxy_ssl_verify off;
+}
+location / {
+    try_files $uri $uri/ /index.html;
+}
+```
+
+**④ 申请 SSL：**
+
+在 BT 面板中开启 SSL 证书申请，完成后自动配置 HTTPS，无需手动改配置。
+
+**⑤ 后续加新业务：**
+
+宝塔新建站点 → Docker 新项目（端口错开，如 8082/8083）→ BT 站点配置追加对应 proxy_pass，互不干扰。
 
 ### 默认账户
 

@@ -37,6 +37,7 @@ mkdir -p "$BUILD_DIR/backend/target"
 cp -r "$PROJECT_DIR/deploy"/*.sh "$BUILD_DIR/deploy/" 2>/dev/null || true
 cp "$PROJECT_DIR/deploy/nginx.conf" "$BUILD_DIR/deploy/"
 cp "$PROJECT_DIR/deploy/bt-nginx.conf" "$BUILD_DIR/deploy/"
+cp "$PROJECT_DIR/deploy/bt-nginx-full.conf" "$BUILD_DIR/deploy/"
 cp "$PROJECT_DIR/deploy/Dockerfile.backend" "$BUILD_DIR/deploy/"
 cp "$PROJECT_DIR/deploy/Dockerfile.frontend" "$BUILD_DIR/deploy/"
 cp "$PROJECT_DIR/deploy/init.sql" "$BUILD_DIR/deploy/"
