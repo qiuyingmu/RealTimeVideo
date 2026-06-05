@@ -34,9 +34,18 @@ if [ ! -f ".env" ]; then
     echo "  - EZS_APP_KEY"
     echo "  - EZS_APP_SECRET"
     echo "  - JWT_SECRET"
-    echo "  - CORS_ALLOWED_ORIGINS（可选，默认 http://localhost）"
+    echo "  - CORS_ALLOWED_ORIGINS（重要！填你的域名，如 https://video.example.com）"
     echo "然后重新运行本脚本"
     exit 1
+fi
+
+# 检查 CORS 是否已配置
+if ! grep -q "CORS_ALLOWED_ORIGINS" .env 2>/dev/null; then
+    echo ""
+    echo "⚠️  未检测到 CORS_ALLOWED_ORIGINS，建议添加（否则登录会报 403）："
+    echo "   echo 'CORS_ALLOWED_ORIGINS=https://你的域名' >> .env"
+    echo "  然后重新运行本脚本"
+    echo ""
 fi
 
 # 加载环境变量

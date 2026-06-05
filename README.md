@@ -178,13 +178,19 @@ npm run dev
 ### 🐳 方式一：Docker 全容器部署（推荐，无需 Nginx 配置）
 
 ```bash
-# 使用预构建产物快速部署
+# 1. 编辑 .env 配置
+cp .env.example .env
+vi .env              # 填入 EZS_APP_KEY, EZS_APP_SECRET, JWT_SECRET
+
+# 2. 构建并启动
 docker compose down
 docker compose up -d --build
 
 # 或使用服务器一键部署脚本
 bash deploy-server.sh
 ```
+
+> ⚠️ **注意**：修改 `.env` 后必须 `docker compose down && docker compose up -d`，不能用 `restart`，否则不会重新读取环境变量。
 
 ### 🧩 方式二：宝塔面板部署（适合已有 BT 管理的服务器）
 
@@ -205,10 +211,21 @@ cd /opt/realtime-video
 cp deploy/env.production .env
 # 编辑 .env 填入萤石云凭证和 JWT 密钥
 vi .env
+```
 
+**⚠️ 关键：配置 CORS 允许的域名（否则登录报 403）：**
+
+```bash
+# 在 .env 中添加一行（域名换成你自己的）
+echo 'CORS_ALLOWED_ORIGINS=https://realtimevideo.jgjl.cn' >> .env
+```
+
+```bash
 # 启动后端（仅运行 db + backend，端口映射 127.0.0.1:8081）
 docker compose -p realtime-video -f docker-compose.backend-only.yml up -d --build
 ```
+
+> ⚠️ **修改 .env 后必须重建容器**：`docker compose -p realtime-video -f docker-compose.backend-only.yml down` 再 `up -d`，`restart` 不会重新读取环境变量。
 
 **② 宝塔面板新建站点：**
 
@@ -272,11 +289,27 @@ location / {
 }
 ```
 
-**④ 申请 SSL：**
+**④ 验证部署：**
 
-在 BT 面板中开启 SSL 证书申请，完成后自动配置 HTTPS，无需手动改配置。
+```bash
+# 检查后端是否正常
+curl http://127.0.0.1:8081/api/health
+# 应返回 {"code":200,"message":"success","data":{"status":"UP"}}
 
-**⑤ 后续加新业务：**
+# 浏览器访问 https://你的域名
+# 看到登录页 → 输入 admin / Admin@123456 → 登录成功
+```
+
+**⑤ 常见问题：**
+
+| 问题 | 原因 | 解决 |
+|------|------|------|
+| 登录返回 403 | CORS 白名单未配置域名 | 在 `.env` 加 `CORS_ALLOWED_ORIGINS=https://你的域名` 并重建容器 |
+| 页面白屏 / 404 | 前端文件未上传或路径不对 | 检查 `frontend/dist/` 是否已复制到站点根目录 |
+| 视频加载失败 | EZUIKit 反代配置错误 | 检查 Nginx 配置中 `/ezuikit_cdn/` 的 location 是否正确 |
+| 修改配置后无效 | `restart` 不会重读 `.env` | 必须 `down` 再 `up -d` |
+
+**⑥ 后续加新业务：**
 
 宝塔新建站点 → Docker 新项目（端口错开，如 8082/8083）→ BT 站点配置追加对应 proxy_pass，互不干扰。
 
