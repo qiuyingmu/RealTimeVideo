@@ -38,7 +38,7 @@
         <form class="cp-form" @submit.prevent="handleSubmit">
           <!-- 当前密码 -->
           <div class="form-group">
-            <label>当前密码</label>
+            <label>当前密码（默认密码 88888888）</label>
             <div class="input-wrapper">
               <input
                 v-model="form.oldPassword"

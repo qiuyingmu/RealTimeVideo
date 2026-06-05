@@ -4,8 +4,7 @@
       <div class="login-header">
         <img src="/logo.svg" class="login-logo" alt="logo" />
         <h1 class="login-title">贵州建工监理咨询有限公司</h1>
-        <p class="login-subtitle">数字化管理平台</p>
-        <p class="login-subtitle project-name">项目监控系统</p>
+        <p class="login-title">数字化管理平台 项目监控系统</p>
         <p class="login-hint">如需开通权限，请联系项目人员</p>
       </div>
 
