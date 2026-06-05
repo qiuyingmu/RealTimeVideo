@@ -1,0 +1,56 @@
+services:
+  # ======================== MySQL 数据库 ========================
+  db:
+    image: mysql:8.0
+    container_name: realtimevideo-db
+    restart: unless-stopped
+    networks:
+      - backend-net
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root123456}
+      MYSQL_DATABASE: realtime_video
+      MYSQL_USER: videoapp
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-VideoApp@2026}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./deploy/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ======================== Spring Boot 后端 ========================
+  backend:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.backend
+    container_name: realtimevideo-backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # 数据库
+      DB_URL: jdbc:mysql://db:3306/realtime_video?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
+      DB_DRIVER: com.mysql.cj.jdbc.Driver
+      DB_USERNAME: videoapp
+      DB_PASSWORD: ${MYSQL_PASSWORD:-VideoApp@2026}
+      # JWT
+      JWT_SECRET: ${JWT_SECRET}
+      # 萤石云
+      EZS_APP_KEY: ${EZS_APP_KEY}
+      EZS_APP_SECRET: ${EZS_APP_SECRET}
+      # CORS — 允许 BT Nginx 所在域名
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost}
+    ports:
+      - "127.0.0.1:8081:8080"
+    networks:
+      - backend-net
+
+volumes:
+  mysql_data:
+
+networks:
+  backend-net:
+    name: realtimevideo-backend

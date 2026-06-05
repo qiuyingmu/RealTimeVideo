@@ -36,11 +36,13 @@ mkdir -p "$BUILD_DIR/backend/target"
 # 复制关键文件
 cp -r "$PROJECT_DIR/deploy"/*.sh "$BUILD_DIR/deploy/" 2>/dev/null || true
 cp "$PROJECT_DIR/deploy/nginx.conf" "$BUILD_DIR/deploy/"
+cp "$PROJECT_DIR/deploy/bt-nginx.conf" "$BUILD_DIR/deploy/"
 cp "$PROJECT_DIR/deploy/Dockerfile.backend" "$BUILD_DIR/deploy/"
 cp "$PROJECT_DIR/deploy/Dockerfile.frontend" "$BUILD_DIR/deploy/"
 cp "$PROJECT_DIR/deploy/init.sql" "$BUILD_DIR/deploy/"
 cp "$PROJECT_DIR/deploy/env.production" "$BUILD_DIR/deploy/"
 cp "$PROJECT_DIR/docker-compose.yml" "$BUILD_DIR/"
+cp "$PROJECT_DIR/docker-compose.backend-only.yml" "$BUILD_DIR/"
 cp -r "$PROJECT_DIR/frontend" "$BUILD_DIR/frontend"
 # 后端源码（Docker 多阶段构建需要源码来检测缓存失效）
 cp "$PROJECT_DIR/backend/pom.xml" "$BUILD_DIR/backend/"

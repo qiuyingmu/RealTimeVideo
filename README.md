@@ -25,12 +25,15 @@
 ├── deploy/                     # Docker 部署配置
 │   ├── Dockerfile.backend      # 后端容器镜像
 │   ├── Dockerfile.frontend     # 前端容器镜像
-│   ├── nginx.conf              # Nginx 配置 (反向代理/WASM/SPA)
+│   ├── nginx.conf              # Nginx 配置（方式一用）
+│   ├── bt-nginx.conf           # 宝塔面板 Nginx 模板（方式二用）
 │   ├── init.sql                # 数据库初始化脚本
 │   ├── build-package.sh        # 构建打包脚本
-│   └── deploy.sh               # 部署脚本
-├── deploy-server.sh            # 服务器一键部署
-├── docker-compose.yml          # 三容器编排 (MySQL + Backend + Nginx)
+│   ├── deploy.sh               # 方式一部署脚本
+│   └── deploy-bt.sh            # 方式二部署脚本（宝塔面板）
+├── deploy-server.sh            # 服务器一键部署（方式一）
+├── docker-compose.yml          # 方式一：三容器编排 (MySQL + Backend + Nginx)
+├── docker-compose.backend-only.yml  # 方式二：仅后端 (MySQL + Backend)
 └── .env.example                # 环境变量配置模板
 ```
 
@@ -171,16 +174,55 @@ npm run dev
 # 开发服务器启动在 http://localhost:5173
 ```
 
-### Docker 生产部署
+### 🐳 方式一：Docker 全容器部署（推荐，无需 Nginx 配置）
 
 ```bash
-# 使用预构建产物快速部署（推荐）
+# 使用预构建产物快速部署
 docker compose down
 docker compose up -d --build
 
 # 或使用服务器一键部署脚本
 bash deploy-server.sh
 ```
+
+### 🧩 方式二：宝塔面板部署（适合已有 BT 管理的服务器）
+
+**架构**：BT Nginx 负责前端 + 反向代理，Docker 仅跑后端 + 数据库。
+
+```
+BT Nginx (80/443)
+  ├── / → 前端静态文件（站点根目录）
+  ├── /api/* → 反向代理 → backend (127.0.0.1:8081)
+  └── /ezuikit_cdn/* → 反向代理 → 萤石云 CDN
+```
+
+**① 部署后端服务：**
+
+```bash
+# 上传构建包到服务器，解压到 /opt/realtime-video
+cd /opt/realtime-video
+cp deploy/env.production .env
+# 编辑 .env 填入真实配置
+vi .env
+
+# 启动后端（仅运行 db + backend，无端口冲突）
+docker compose -p realtime-video -f docker-compose.backend-only.yml up -d --build
+```
+
+**② 配置宝塔站点：**
+
+1. 宝塔面板 → 网站 → **添加站点**（输入你的域名）
+2. 将 `frontend/dist/` 下的所有文件上传到站点根目录
+3. 站点设置 → 配置文件中，**替换为 `deploy/bt-nginx.conf` 的内容**
+   - 修改 `server_name` 和 `root` 路径
+4. （可选）开启 SSL
+
+```bash
+# 上传前端文件示例
+scp -r /path/to/realtime-video-build/frontend/dist/* root@服务器IP:/www/wwwroot/你的域名/
+```
+
+**③ 后续加新业务**：宝塔新建站点 → 新 Docker 项目（端口错开）→ BT Nginx 配 proxy_pass，互不干扰。
 
 ### 默认账户
 
