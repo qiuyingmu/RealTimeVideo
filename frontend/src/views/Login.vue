@@ -4,13 +4,15 @@
       <div class="login-header">
         <img src="/logo.svg" class="login-logo" alt="logo" />
         <h1 class="login-title">贵州建工监理咨询有限公司</h1>
-        <p class="login-subtitle">视频监控管理平台</p>
+        <p class="login-subtitle">数字化管理平台</p>
+        <p class="login-subtitle project-name">项目监控系统</p>
+        <p class="login-hint">如需开通权限，请联系项目人员</p>
       </div>
 
       <form class="login-form" @submit.prevent="handleLogin" autocomplete="off">
-        <!-- 用户名 -->
+        <!-- 手机号 -->
         <div class="form-group">
-          <label for="username">用户名</label>
+          <label for="username">手机号</label>
           <div class="input-wrapper">
             <svg class="input-icon" viewBox="0 0 24 24" width="20" height="20">
               <circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="2"/>
@@ -20,7 +22,7 @@
               id="username"
               v-model="form.username"
               type="text"
-              placeholder="请输入用户名"
+              placeholder="请输入手机号"
               maxlength="50"
               :disabled="loading"
               autocomplete="username"
@@ -183,6 +185,20 @@ async function handleLogin() {
 .login-subtitle {
   font-size: 14px;
   color: var(--text-secondary);
+}
+
+.login-subtitle.project-name {
+  color: #dc2626;
+  font-weight: 700;
+  font-size: 16px;
+  margin-top: -4px;
+}
+
+.login-hint {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-top: 12px;
+  text-align: center;
 }
 
 .login-form {
