@@ -107,7 +107,7 @@
 
     <!-- 创建用户弹窗 -->
     <transition name="fade">
-      <div v-if="showCreateDialog" class="modal-overlay" @click.self="showCreateDialog = false">
+      <div v-if="showCreateDialog" class="modal-overlay" @pointerdown.self="showCreateDialog = false">
         <div class="modal-content form-modal">
           <div class="modal-header">
             <h2>新增用户</h2>
@@ -167,7 +167,7 @@
 
     <!-- 重置密码弹窗 -->
     <transition name="fade">
-      <div v-if="resetPwdUser" class="modal-overlay" @click.self="resetPwdUser = null">
+      <div v-if="resetPwdUser" class="modal-overlay" @pointerdown.self="resetPwdUser = null">
         <div class="modal-content form-modal">
           <div class="modal-header">
             <h2>重置密码 - {{ resetPwdUser.username }}</h2>
