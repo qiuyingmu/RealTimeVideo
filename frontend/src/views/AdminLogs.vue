@@ -322,8 +322,8 @@ html.dark .btn-back:active {
   .filters select, .filters input { padding: 10px 12px; font-size: 14px; }
   .log-count { margin-left: 0; }
 
-  /* 表格可横向滚动 */
-  .log-list { overflow-x: auto; }
+  /* 表格横向+纵向双滚动 */
+  .log-list { overflow: auto; max-height: calc(100vh - 280px); }
   .log-table { font-size: 12px; min-width: 600px; }
   .log-table th, .log-table td { padding: 8px 10px; }
   .cell-detail { display: none; }

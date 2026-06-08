@@ -754,6 +754,12 @@ html.dark .btn-back:active {
   .user-table td:nth-child(6), .user-table th:nth-child(6) { display: none; } /* 隐藏登录失败次数 */
   .user-table td:nth-child(7), .user-table th:nth-child(7) { display: none; } /* 隐藏最后登录时间 */
 
+  /* 移动端表格：横向+纵向双滚动 */
+  .user-table-wrapper {
+    overflow: auto;
+    max-height: calc(100vh - 280px);
+  }
+
   .action-btn { font-size: 12px; padding: 8px 10px; min-width: 36px; min-height: 36px; }
   .btn-add { padding: 10px 16px; font-size: 14px; }
   .table-wrap { margin: 0 -12px; border-radius: 0; overflow-x: auto; }

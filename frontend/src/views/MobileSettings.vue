@@ -264,7 +264,6 @@ async function handleLogout() {
   border-radius: 14px;
   border: 1px solid #e2e8f0;
   margin-bottom: 16px;
-  overflow: hidden;
 }
 
 .settings-item {
