@@ -321,7 +321,8 @@ html.dark .btn-back:active {
     padding: 12px;
     display: flex;
     flex-direction: column;
-    height: 100%;
+    position: absolute;
+    inset: 0;
   }
 
   .page-header { flex-shrink: 0; }
@@ -339,7 +340,6 @@ html.dark .btn-back:active {
   .log-table th, .log-table td { padding: 8px 10px; }
   .cell-detail { display: none; }
   .col-detail { display: none; }
-  .cell-ip { display: none; }
 
   /* 分页按钮增大触摸区域 */
   .pagination button {

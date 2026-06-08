@@ -744,7 +744,8 @@ html.dark .btn-back:active {
     padding: 12px;
     display: flex;
     flex-direction: column;
-    height: 100%;
+    position: absolute;
+    inset: 0;
   }
 
   .admin-header { flex-direction: column; gap: 12px; align-items: flex-start; }
