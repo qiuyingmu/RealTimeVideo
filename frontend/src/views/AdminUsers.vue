@@ -751,8 +751,8 @@ html.dark .btn-back:active {
 
   .user-table { font-size: 12px; }
   .user-table th, .user-table td { padding: 10px 8px; }
-  .user-table td:nth-child(5), .user-table th:nth-child(5) { display: none; } /* 隐藏最后登录时间 */
-  .user-table td:nth-child(6), .user-table th:nth-child(6) { display: none; } /* 隐藏失败次数 */
+  .user-table td:nth-child(6), .user-table th:nth-child(6) { display: none; } /* 隐藏登录失败次数 */
+  .user-table td:nth-child(7), .user-table th:nth-child(7) { display: none; } /* 隐藏最后登录时间 */
 
   .action-btn { font-size: 12px; padding: 8px 10px; min-width: 36px; min-height: 36px; }
   .btn-add { padding: 10px 16px; font-size: 14px; }
