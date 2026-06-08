@@ -432,4 +432,20 @@ html.dark .section-header {
   color: #94a3b8;
   padding: 12px 0 24px;
 }
+
+/* 移动端小屏适配 */
+@media (max-width: 400px) {
+  .mobile-settings { padding: 10px 12px; }
+  .settings-item { padding: 12px; min-height: 44px; }
+  .settings-item-left { gap: 10px; font-size: 13px; }
+  .settings-icon { width: 18px; height: 18px; }
+  .chevron { width: 14px; height: 14px; }
+  .settings-select { font-size: 12px; padding: 5px 24px 5px 10px; }
+  .user-card { padding: 12px; gap: 10px; }
+  .user-avatar { width: 40px; height: 40px; }
+  .user-name { font-size: 14px; }
+  .section-header { font-size: 11px; padding: 10px 14px 6px; }
+  .link-item { min-height: 44px; }
+  .logout-btn { padding: 12px; font-size: 14px; }
+}
 </style>
