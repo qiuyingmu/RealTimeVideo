@@ -579,9 +579,6 @@ html.dark .btn-back:active {
   border-radius: var(--radius);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   max-height: 90vh;
-  /* 防止触屏滑动事件逃逸到遮罩层触发关闭 */
-  touch-action: none;
-  -webkit-touch-callout: none;
   overflow-y: auto;
 }
 
