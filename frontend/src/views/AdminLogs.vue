@@ -317,13 +317,24 @@ html.dark .btn-back:active {
 
 /* 移动端 */
 @media (max-width: 768px) {
-  .logs-page { padding: 12px; }
-  .filters { flex-direction: column; align-items: stretch; gap: 8px; }
+  .logs-page {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+
+  .page-header { flex-shrink: 0; }
+  .filters { flex-direction: column; align-items: stretch; gap: 8px; flex-shrink: 0; }
   .filters select, .filters input { padding: 10px 12px; font-size: 14px; }
   .log-count { margin-left: 0; }
 
-  /* 表格横向+纵向双滚动 */
-  .log-list { overflow: auto; max-height: calc(100vh - 280px); }
+  /* 表格区域填满剩余空间 + 双滚动 */
+  .log-list {
+    overflow: auto;
+    flex: 1;
+    min-height: 0;
+  }
   .log-table { font-size: 12px; min-width: 600px; }
   .log-table th, .log-table td { padding: 8px 10px; }
   .cell-detail { display: none; }

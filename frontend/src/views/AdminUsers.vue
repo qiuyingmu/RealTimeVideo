@@ -740,12 +740,17 @@ html.dark .btn-back:active {
 
 /* 移动端适配 */
 @media (max-width: 768px) {
-  .admin-users { padding: 12px; }
+  .admin-users {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
 
   .admin-header { flex-direction: column; gap: 12px; align-items: flex-start; }
   .admin-header h1 { font-size: 18px; }
 
-  .page-header { flex-direction: column; gap: 12px; }
+  .page-header { flex-direction: column; gap: 12px; flex-shrink: 0; }
   .page-header h1 { font-size: 18px; }
   .page-desc { font-size: 12px; }
 
@@ -754,10 +759,11 @@ html.dark .btn-back:active {
   .user-table td:nth-child(6), .user-table th:nth-child(6) { display: none; } /* 隐藏登录失败次数 */
   .user-table td:nth-child(7), .user-table th:nth-child(7) { display: none; } /* 隐藏最后登录时间 */
 
-  /* 移动端表格：横向+纵向双滚动 */
+  /* 移动端表格：flex 填充剩余空间 + 双滚动 */
   .user-table-wrapper {
+    flex: 1;
     overflow: auto;
-    max-height: calc(100vh - 280px);
+    min-height: 0;
   }
 
   .action-btn { font-size: 12px; padding: 8px 10px; min-width: 36px; min-height: 36px; }
