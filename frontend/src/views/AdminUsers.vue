@@ -750,7 +750,7 @@ html.dark .btn-back:active {
   .page-desc { font-size: 12px; }
 
   .user-table { font-size: 12px; }
-  .user-table th, .user-table td { padding: 10px 8px; }
+  .user-table th, .user-table td { padding: 10px 8px; white-space: nowrap; }
   .user-table td:nth-child(6), .user-table th:nth-child(6) { display: none; } /* 隐藏登录失败次数 */
   .user-table td:nth-child(7), .user-table th:nth-child(7) { display: none; } /* 隐藏最后登录时间 */
 

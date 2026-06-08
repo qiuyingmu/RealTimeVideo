@@ -290,6 +290,12 @@ async function handleLogout() {
   min-width: 0;
 }
 
+.settings-item-left span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .settings-icon {
   color: #64748b;
   flex-shrink: 0;
