@@ -110,6 +110,14 @@ public class GlobalExceptionHandler {
     //  HTTP 层面异常
     // ================================================================
 
+    /**
+     * 客户端断开连接（浏览器提前关闭/刷新页面），属于正常行为，不记录错误日志
+     */
+    @ExceptionHandler(org.springframework.web.context.request.async.AsyncRequestNotUsableException.class)
+    public void handleClientAbort() {
+        // 客户端断开连接是正常现象，不记录任何日志
+    }
+
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<ApiResponse<Void>> handleMethodNotSupported(
             HttpRequestMethodNotSupportedException ex) {
