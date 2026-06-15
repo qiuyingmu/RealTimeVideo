@@ -310,11 +310,10 @@ async function initPlayer() {
   startLoadTimeout(CONNECT_TIMEOUT)
 
   try {
-    currentToken = props.cachedToken
-    if (!currentToken) {
-      loadStep.value = 1
-      currentToken = (await ezvizApi.getToken()).data.data.accessToken
-    }
+    // 切换通道时忽略缓存的 Token，每次从后端获取最新凭证
+    // 萤石云 Token 有过期时间，缓存可能导致播放时报 10002
+    loadStep.value = 1
+    currentToken = (await ezvizApi.getToken()).data.data.accessToken
     loadStep.value = 2; loadStep.value = 3
     createPlayer()
   } catch (err) {
@@ -536,11 +535,14 @@ onMounted(() => {
 
   // 全局拦截 EZUIKit 内部 CORS 错误（不影响视频直播）
   corsErrorHandler = (event) => {
-    const reason = event?.reason || {}
-    const url = reason.url || ''
-    const msg = reason.message || reason.stack || ''
-    if (msg.includes('open.ys7.com') || url.includes('open.ys7.com')) {
-      event.preventDefault()
+    const reason = event?.reason
+    // TypeError: Failed to fetch 且来自 EZUIKit SDK → 静默处理
+    if (reason instanceof TypeError) {
+      const stack = reason.stack || ''
+      if (stack.includes('ezuikit') || stack.includes('EzUIKit') ||
+          stack.includes('ys7.com') || stack.includes('open.ys7')) {
+        event.preventDefault()
+      }
     }
   }
   window.addEventListener('unhandledrejection', corsErrorHandler)
