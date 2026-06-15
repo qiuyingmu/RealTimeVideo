@@ -1,5 +1,5 @@
-# 使用本地预构建的 JAR，跳过 Maven 编译阶段
-FROM eclipse-temurin:17-jre-alpine
+# 使用 DaoCloud 国内镜像（Docker Hub 被墙）
+FROM m.daocloud.io/docker.io/eclipse-temurin:17-jre-alpine
 
 WORKDIR /app
 
