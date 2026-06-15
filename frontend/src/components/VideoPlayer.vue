@@ -263,11 +263,26 @@ function createPlayer() {
       // 确保播放器容器不被内部resize挤压
       stabilizePlayerContainer()
     },
-    handleError: (err) => {
+    handleError: async (err) => {
       clearLoadTimeout()
-      const code = err?.code || ''
+      const code = String(err?.code || '')
       const retryableCodes = ['399001', '10001']
-      if (retryableCodes.includes(String(code)) && retryCount.value < MAX_RETRIES) {
+      // Token 过期（萤石云 code 10002）：自动刷新 Token 后重新播放
+      if (code === '10002') {
+        console.warn('萤石云 Token 已过期，正在刷新 Token 后重新播放...')
+        try {
+          const res = await ezvizApi.getToken()
+          currentToken = res.data.data.accessToken
+        } catch (e) {
+          error.value = 'Token 刷新失败，请刷新页面重试'
+          loading.value = false
+          return
+        }
+        destroyPlayerInstance()
+        createPlayer()
+        return
+      }
+      if (retryableCodes.includes(code) && retryCount.value < MAX_RETRIES) {
         handleConnectTimeout()
       } else {
         const errorMap = {
@@ -275,7 +290,7 @@ function createPlayer() {
           '395415': '设备通道错误', '399001': '网络超时',
           '3820032': '通道不存在', '10001': '视频流协议错误',
         }
-        error.value = errorMap[String(code)] || `${(err?.msg || err?.message || '播放失败')}(${code})`
+        error.value = errorMap[code] || `${(err?.msg || err?.message || '播放失败')}(${code})`
         loading.value = false; isSwitchingQuality.value = false; isSwitchingChannel.value = false
       }
     }
