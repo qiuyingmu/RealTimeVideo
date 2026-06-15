@@ -526,10 +526,24 @@ watch(() => props.channel, (newChannel, oldChannel) => {
 }, { immediate: false })
 
 // ====== 生命周期 ======
+/** 拦截 EZUIKit 内部 fetch open.ys7.com 的 CORS 错误（萤石云服务端问题） */
+let corsErrorHandler = null
+
 onMounted(() => {
   updateIsMobile()
   // 窗口尺寸变化时同步 isMobile 状态（影响频道导航按钮显示）
   window.addEventListener('resize', updateIsMobile)
+
+  // 全局拦截 EZUIKit 内部 CORS 错误（不影响视频直播）
+  corsErrorHandler = (event) => {
+    const reason = event?.reason || {}
+    const url = reason.url || ''
+    const msg = reason.message || reason.stack || ''
+    if (msg.includes('open.ys7.com') || url.includes('open.ys7.com')) {
+      event.preventDefault()
+    }
+  }
+  window.addEventListener('unhandledrejection', corsErrorHandler)
 
   initPlayer()
   networkMonitor = setInterval(checkNetworkQuality, 30000)
@@ -547,6 +561,10 @@ onUnmounted(() => {
   if (networkMonitor) { clearInterval(networkMonitor); networkMonitor = null }
   clearTimeout(controlsHideTimer)
   if (resizeObserver) { resizeObserver.disconnect(); resizeObserver = null }
+  if (corsErrorHandler) {
+    window.removeEventListener('unhandledrejection', corsErrorHandler)
+    corsErrorHandler = null
+  }
   destroyPlayer()
 
   document.removeEventListener('fullscreenchange', onFullscreenChange)
