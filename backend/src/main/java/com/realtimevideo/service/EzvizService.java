@@ -20,6 +20,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -68,19 +69,22 @@ public class EzvizService {
     // ================================================================
 
     public String getAccessToken() {
-        if (accessToken != null && Instant.now().isBefore(tokenExpiresAt)) {
+        // 提前 5 分钟续期，避免边缘情况（网络延迟/时钟偏差）
+        Instant refreshAt = tokenExpiresAt.minus(300, java.time.temporal.ChronoUnit.SECONDS);
+        if (accessToken != null && Instant.now().isBefore(refreshAt)) {
             return accessToken;
         }
         return refreshAccessToken();
     }
 
     private String refreshAccessToken() {
-        if (accessToken != null && Instant.now().isBefore(tokenExpiresAt)) {
+        Instant refreshAt = tokenExpiresAt.minus(300, java.time.temporal.ChronoUnit.SECONDS);
+        if (accessToken != null && Instant.now().isBefore(refreshAt)) {
             return accessToken;
         }
         tokenLock.lock();
         try {
-            if (accessToken != null && Instant.now().isBefore(tokenExpiresAt)) {
+            if (accessToken != null && Instant.now().isBefore(refreshAt)) {
                 return accessToken;
             }
             MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
@@ -99,7 +103,12 @@ public class EzvizService {
                 Map<String, Object> data = (Map<String, Object>) response.get("data");
                 this.accessToken = (String) data.get("accessToken");
                 long expireTime = ((Number) data.get("expireTime")).longValue();
-                this.tokenExpiresAt = Instant.ofEpochSecond(expireTime);
+                // expireTime 可能是秒或毫秒，自动判断
+                // 毫秒值（13位，如 1718430000000）=> ofEpochMilli
+                // 秒值（10位，如 1718430000）=> ofEpochSecond
+                this.tokenExpiresAt = expireTime > 100000000000L
+                        ? Instant.ofEpochMilli(expireTime)
+                        : Instant.ofEpochSecond(expireTime);
                 log.info("萤石云 accessToken 获取成功，有效期至: {}", tokenExpiresAt);
                 return this.accessToken;
             } else {
