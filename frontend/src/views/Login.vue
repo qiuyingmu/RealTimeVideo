@@ -4,7 +4,7 @@
       <div class="login-header">
         <img src="/logo.svg" class="login-logo" alt="logo" />
         <h1 class="login-title">贵州建工监理咨询有限公司</h1>
-        <p class="login-title">数字化管理平台 项目监控系统</p>
+        <p class="login-subtitle project-name">数字化管理平台 项目监控系统</p>
         <p class="login-hint">如需开通权限，请联系项目人员</p>
       </div>
 
@@ -507,42 +507,87 @@ onUnmounted(() => {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* 移动端适配 */
+/* 移动端适配 — 全屏白底 + 顶部渐变装饰条 */
 @media (max-width: 768px) {
   .login-page {
     padding: 0;
-    align-items: flex-start;
-    background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+    align-items: stretch;
+    background: #fff;
+    min-height: 100dvh;
   }
 
   .login-container {
     max-width: 100%;
-    border-radius: 16px 16px 0 0;
-    margin-top: 80px;
-    padding: 32px 24px;
-    padding-bottom: 40px;
+    border-radius: 0;
+    padding: 0;
+    box-shadow: none;
+    display: flex;
+    flex-direction: column;
+    min-height: 100dvh;
+    animation: none;
+    position: relative;
   }
 
-  .login-header svg {
-    width: 56px;
-    height: 56px;
+  /* 顶部渐变装饰条 */
+  .login-container::before {
+    content: '';
+    display: block;
+    height: 140px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    flex-shrink: 0;
   }
 
-  .login-header h1 {
-    font-size: 22px;
+  .login-header {
+    margin: -70px 20px 0;
+    padding: 24px 16px 20px;
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    position: relative;
+    z-index: 1;
   }
 
-  .login-header p {
+  .login-logo {
+    width: 52px;
+    height: 52px;
+    margin-bottom: 12px;
+  }
+
+  .login-title {
+    font-size: 20px;
+    margin-bottom: 4px;
+  }
+
+  .login-subtitle {
     font-size: 13px;
   }
 
+  .login-subtitle.project-name {
+    font-size: 14px;
+  }
+
+  .login-hint {
+    font-size: 12px;
+    margin-top: 8px;
+  }
+
+  .login-form {
+    padding: 20px 20px 0;
+    gap: 16px;
+    flex: 1;
+  }
+
+  .login-mode-tabs {
+    margin-bottom: 4px;
+  }
+
   .input-wrapper {
-    margin-bottom: 18px;
+    margin-bottom: 0;
   }
 
   .input-wrapper input {
     padding: 14px 16px;
-    font-size: 16px; /* 防止iOS缩放 */
+    font-size: 16px;
     padding-left: 44px;
   }
 
@@ -558,6 +603,23 @@ onUnmounted(() => {
   .toggle-password {
     right: 14px;
     padding: 8px;
+  }
+
+  .login-footer {
+    padding: 16px 20px 24px;
+    margin-top: auto;
+  }
+
+  .login-footer p {
+    font-size: 11px;
+  }
+
+  /* 设置密码弹窗移动端适配 */
+  .setpwd-overlay {
+    padding: 16px;
+  }
+  .setpwd-dialog {
+    padding: 28px 24px;
   }
 }
 

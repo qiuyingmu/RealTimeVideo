@@ -12,6 +12,11 @@
   --warning: #fb8c00;
   --success: #43a047;
 
+  /* 语义色别名（兼容其他组件引用） */
+  --danger-color: #e53935;
+  --success-color: #43a047;
+  --text-tertiary: #94a3b8;
+
   /* 背景 */
   --bg: #f0f2f5;
   --bg-card: #ffffff;

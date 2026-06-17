@@ -273,10 +273,11 @@ function redirectToHome() {
 
 onUnmounted(() => {
   if (countdownTimer) clearInterval(countdownTimer)
+  if (removeAfterEach) removeAfterEach()
 })
 
 // 监听路由变化：如果用户在倒计时期间手动跳转（点击导航栏），清理定时器
-router.afterEach(() => {
+const removeAfterEach = router.afterEach(() => {
   if (countdownTimer) clearInterval(countdownTimer)
 })
 </script>
