@@ -80,6 +80,7 @@ export const useAuthStore = defineStore('auth', () => {
     isAuthenticated,
     isAdmin,
     login,
+    smsLogin,
     logout,
     setTokens,
     setUserInfo
