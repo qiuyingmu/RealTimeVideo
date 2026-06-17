@@ -193,6 +193,43 @@ public class UserService {
     }
 
     /**
+     * 设置密码（短信验证码登录后可选）
+     *
+     * 无需验证旧密码，仅验证密码长度。
+     */
+    @Transactional
+    public LoginResponse setPassword(String username, String newPassword) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("用户不存在"));
+
+        // 验证新密码长度（6~18 位）
+        if (newPassword == null || newPassword.length() < PASSWORD_MIN_LENGTH || newPassword.length() > PASSWORD_MAX_LENGTH) {
+            throw new IllegalArgumentException("密码长度必须为 " + PASSWORD_MIN_LENGTH + "~" + PASSWORD_MAX_LENGTH + " 位");
+        }
+
+        String encodedNewPassword = passwordEncoder.encode(newPassword);
+        userRepository.updatePassword(username, encodedNewPassword);
+
+        user.setPasswordChangeRequired(false);
+        log.info("用户 {} 密码设置成功（短信登录后）", username);
+
+        // 生成新 Token
+        String newAccessToken = jwtService.generateAccessToken(username, user.getRole().name());
+        String newRefreshToken = jwtService.generateRefreshToken(username);
+
+        return LoginResponse.builder()
+                .accessToken(newAccessToken)
+                .refreshToken(newRefreshToken)
+                .tokenType("Bearer")
+                .expiresIn(jwtService.getAccessTokenExpiration())
+                .username(user.getUsername())
+                .displayName(user.getDisplayName())
+                .role(user.getRole().name())
+                .passwordChangeRequired(false)
+                .build();
+    }
+
+    /**
      * 用户登出
      */
     @Transactional

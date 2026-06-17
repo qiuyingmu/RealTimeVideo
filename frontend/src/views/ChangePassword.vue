@@ -1,5 +1,5 @@
 <template>
-  <!-- standalone 模式：全屏渐变背景（用于强制改密重定向） -->
+  <!-- standalone 模式：全屏渐变背景（用于强制改密重定向 / 短信登录后设置密码） -->
   <!-- inline 模式：无背景，适配 MobileLayout 内嵌 -->
   <div class="change-password-page" :class="{ 'mode-standalone': isStandalone }">
     <div class="cp-container" :class="{ 'mode-standalone': isStandalone }">
@@ -12,14 +12,15 @@
               <polyline points="20 32 28 40 44 24" fill="none" stroke="#10b981" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </div>
-          <h2 class="success-title">密码修改成功</h2>
-          <p class="success-subtitle" v-if="isFirstChange">初始密码已更新，请使用新密码登录</p>
+          <h2 class="success-title">{{ isSetupMode ? '密码设置成功' : '密码修改成功' }}</h2>
+          <p class="success-subtitle" v-if="isSetupMode">以后您也可以用手机号 + 密码登录了</p>
+          <p class="success-subtitle" v-else-if="isFirstChange">初始密码已更新，请使用新密码登录</p>
           <p class="success-subtitle" v-else>您的密码已安全更新</p>
           <p class="redirect-hint">即将跳转{{ countdown }}秒...</p>
         </div>
       </template>
 
-      <!-- ====== 密码修改表单 ====== -->
+      <!-- ====== 表单 ====== -->
       <template v-else>
         <!-- 头部 -->
         <div class="cp-header" v-if="isStandalone">
@@ -31,13 +32,14 @@
           </svg>
         </div>
         <h2 class="cp-title" :class="{ 'mobile-title': !isStandalone }">
-          {{ isFirstChange ? '首次登录，请修改密码' : '修改密码' }}
+          {{ isSetupMode ? '设置密码' : (isFirstChange ? '首次登录，请修改密码' : '修改密码') }}
         </h2>
-        <p class="cp-subtitle" v-if="isFirstChange && isStandalone">为保障账户安全，首次登录后请立即修改初始密码</p>
+        <p class="cp-subtitle" v-if="isSetupMode">设置密码后，您也可以使用「手机号+密码」登录</p>
+        <p class="cp-subtitle" v-else-if="isFirstChange && isStandalone">为保障账户安全，首次登录后请立即修改初始密码</p>
 
         <form class="cp-form" @submit.prevent="handleSubmit">
-          <!-- 当前密码 -->
-          <div class="form-group">
+          <!-- 当前密码（仅改密模式需要） -->
+          <div class="form-group" v-if="!isSetupMode">
             <label>当前密码（默认密码 88888888）</label>
             <div class="input-wrapper">
               <input
@@ -139,7 +141,7 @@
 
           <!-- 提交按钮 -->
           <button type="submit" class="btn-submit" :disabled="loading || !isFormValid">
-            <span v-if="!loading">{{ isFirstChange ? '确认修改' : '保存密码' }}</span>
+            <span v-if="!loading">{{ isSetupMode ? '保存密码' : (isFirstChange ? '确认修改' : '保存密码') }}</span>
             <span v-else class="loading-spinner"></span>
           </button>
         </form>
@@ -163,6 +165,11 @@ const isStandalone = computed(() => {
   return authStore.passwordChangeRequired || route.name === 'ChangePassword'
 })
 
+// 判断是否为短信登录后「设置密码」模式（无需旧密码）
+const isSetupMode = computed(() => {
+  return route.query.mode === 'setup'
+})
+
 const isFirstChange = computed(() => {
   return authStore.passwordChangeRequired
 })
@@ -184,6 +191,12 @@ const countdown = ref(3)
 let countdownTimer = null
 
 const isFormValid = computed(() => {
+  // 设置密码模式不需要旧密码
+  if (isSetupMode.value) {
+    return form.newPassword.length >= 6 &&
+           form.newPassword.length <= 18 &&
+           form.newPassword === form.confirmPassword
+  }
   return form.oldPassword.length >= 1 &&
          form.newPassword.length >= 6 &&
          form.newPassword.length <= 18 &&
@@ -205,18 +218,25 @@ async function handleSubmit() {
   errorMessage.value = ''
 
   try {
-    const response = await authApi.changePassword({
-      oldPassword: form.oldPassword,
-      newPassword: form.newPassword,
-      confirmPassword: form.confirmPassword
-    })
-
-    const data = response.data.data
-
-    // 更新前端存储的新 Token
-    authStore.setTokens(data.accessToken)
-    // 改密完成，清除强制改密标记
-    authStore.passwordChangeRequired = false
+    if (isSetupMode.value) {
+      // 设置密码模式（短信登录后）：无需旧密码
+      const response = await authApi.setPassword({
+        newPassword: form.newPassword,
+        confirmPassword: form.confirmPassword
+      })
+      const data = response.data.data
+      authStore.setTokens(data.accessToken)
+    } else {
+      // 普通修改密码模式：需验证旧密码
+      const response = await authApi.changePassword({
+        oldPassword: form.oldPassword,
+        newPassword: form.newPassword,
+        confirmPassword: form.confirmPassword
+      })
+      const data = response.data.data
+      authStore.setTokens(data.accessToken)
+      authStore.passwordChangeRequired = false
+    }
 
     // 显示成功状态
     success.value = true
@@ -239,6 +259,11 @@ async function handleSubmit() {
 }
 
 function redirectToHome() {
+  // 设置密码模式：使用 query 中的 redirect 参数
+  if (isSetupMode.value && route.query.redirect) {
+    router.replace(route.query.redirect)
+    return
+  }
   if (window.innerWidth <= 768 || 'ontouchstart' in window) {
     router.replace('/mobile/dashboard')
   } else {

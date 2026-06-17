@@ -157,6 +157,9 @@ export const authApi = {
   changePassword: (data) =>
     api.post('/auth/change-password', data),
 
+  setPassword: (data) =>
+    api.post('/auth/set-password', data),
+
   me: () =>
     api.get('/auth/me'),
   sendSmsCode: (phoneNumber) =>

@@ -113,6 +113,46 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success("密码修改成功", response));
     }
 
+    /**
+     * 设置密码（短信验证码登录后可选）
+     *
+     * 无需旧密码，仅验证新密码长度（6~18 位）。
+     * 短信登录用户通过手机号验证了身份，可直接设置密码。
+     */
+    @PostMapping("/set-password")
+    public ResponseEntity<ApiResponse<LoginResponse>> setPassword(
+            @RequestBody Map<String, String> body,
+            HttpServletRequest httpRequest,
+            HttpServletResponse httpResponse) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
+
+        String newPassword = body.get("newPassword");
+        String confirmPassword = body.get("confirmPassword");
+
+        // 参数完整性校验
+        if (newPassword == null || confirmPassword == null) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("请填写密码字段"));
+        }
+
+        // 两次密码一致性校验
+        if (!newPassword.equals(confirmPassword)) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("两次输入的新密码不一致"));
+        }
+
+        LoginResponse response = userService.setPassword(username, newPassword);
+
+        // 下发新 refreshToken
+        addRefreshTokenCookie(httpResponse, response.getRefreshToken());
+
+        auditLogService.log("SET_PASSWORD", "user:" + username,
+                "用户设置密码", httpRequest);
+
+        return ResponseEntity.ok(ApiResponse.success("密码设置成功", response));
+    }
+
     @PostMapping("/logout")
     public ResponseEntity<ApiResponse<Void>> logout(
             @RequestHeader("Authorization") String authHeader,
