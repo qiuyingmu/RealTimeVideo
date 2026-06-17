@@ -69,6 +69,19 @@ public class AdminController {
         return ResponseEntity.ok(ApiResponse.success("用户" + status, user));
     }
 
+    @PutMapping("/users/{id}")
+    public ResponseEntity<ApiResponse<Void>> updateUser(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> body,
+            HttpServletRequest httpRequest) {
+        String displayName = body.get("displayName");
+        userService.updateUser(id, displayName);
+        User user = userService.getUserById(id);
+        auditLogService.log("UPDATE_USER", "user:" + user.getUsername(),
+                "更新用户信息: " + user.getUsername(), httpRequest);
+        return ResponseEntity.ok(ApiResponse.success("用户信息已更新", null));
+    }
+
     @PutMapping("/users/{id}/reset-password")
     public ResponseEntity<ApiResponse<Void>> resetPassword(
             @PathVariable Long id,

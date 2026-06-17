@@ -46,6 +46,7 @@ public class SecurityConfig {
                     // 公开端点
                     .requestMatchers("/api/auth/login").permitAll()
                     .requestMatchers("/api/auth/refresh").permitAll()
+                    .requestMatchers("/api/auth/send-sms-code").permitAll()
                     .requestMatchers("/api/health").permitAll()
                     // H2 Console（仅开发环境，prod profile 已禁用 H2）
                     .requestMatchers("/h2-console/**").permitAll()

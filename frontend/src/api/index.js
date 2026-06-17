@@ -247,6 +247,9 @@ export const adminApi = {
   toggleEnabled: (id) =>
     api.put(`/admin/users/${id}/toggle-enabled`),
 
+  updateUser: (id, data) =>
+    api.put(`/admin/users/${id}`, data),
+
   resetPassword: (id, newPassword) =>
     api.put(`/admin/users/${id}/reset-password`, { newPassword }),
 

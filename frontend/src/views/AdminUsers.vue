@@ -70,6 +70,12 @@
             </td>
             <td class="cell-time">{{ user.lastLoginAt ? formatTime(user.lastLoginAt) : '-' }}</td>
             <td class="cell-actions">
+              <button class="action-btn" @click="editUser(user)" title="编辑">
+                <svg viewBox="0 0 24 24" width="16" height="16">
+                  <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+              </button>
               <button class="action-btn" @click="resetPassword(user)" title="重置密码">
                 <svg viewBox="0 0 24 24" width="16" height="16">
                   <rect x="3" y="11" width="18" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
@@ -195,6 +201,35 @@
         </div>
       </div>
     </transition>
+
+    <!-- 编辑用户弹窗 -->
+    <transition name="fade">
+      <div v-if="editUserData" class="modal-overlay" @pointerdown.self="editUserData = null">
+        <div class="modal-content form-modal">
+          <div class="modal-header">
+            <h2>编辑用户 - {{ editUserData.username }}</h2>
+            <button class="btn-close" @click="editUserData = null">
+              <svg viewBox="0 0 24 24" width="24" height="24">
+                <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2"/>
+                <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2"/>
+              </svg>
+            </button>
+          </div>
+          <form class="user-form" @submit.prevent="handleEditUser">
+            <div class="form-group">
+              <label>显示名称</label>
+              <input v-model="editForm.displayName" placeholder="用户显示名称" maxlength="100"/>
+            </div>
+            <div class="form-actions">
+              <button type="button" class="btn-cancel" @click="editUserData = null">取消</button>
+              <button type="submit" class="btn-submit" :disabled="editing">
+                {{ editing ? '保存中...' : '保存修改' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -222,6 +257,9 @@ const resetPwdUser = ref(null)
 const newPassword = ref('')
 const resetting = ref(false)
 const showPwd = ref(false)
+const editUserData = ref(null)
+const editForm = reactive({ displayName: '' })
+const editing = ref(false)
 
 const createForm = reactive({
   username: '',
@@ -309,6 +347,26 @@ async function confirmDelete(user) {
     toast.success('用户已删除')
   } catch (err) {
     toast.error(err.friendlyMessage || '删除用户失败，请重试')
+  }
+}
+
+function editUser(user) {
+  editUserData.value = user
+  editForm.displayName = user.displayName || ''
+}
+
+async function handleEditUser() {
+  if (!editUserData.value) return
+  editing.value = true
+  try {
+    await adminApi.updateUser(editUserData.value.id, { displayName: editForm.displayName })
+    editUserData.value = null
+    await fetchUsers()
+    toast.success('用户信息已更新')
+  } catch (err) {
+    toast.error(err.friendlyMessage || '更新失败，请重试')
+  } finally {
+    editing.value = false
   }
 }
 

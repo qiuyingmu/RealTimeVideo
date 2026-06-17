@@ -302,6 +302,18 @@ public class UserService {
     }
 
     /**
+     * 更新用户信息（显示名等）
+     */
+    @Transactional
+    public void updateUser(Long id, String displayName) {
+        User user = getUserById(id);
+        if (displayName != null && !displayName.isEmpty()) {
+            user.setDisplayName(displayName);
+        }
+        userRepository.save(user);
+    }
+
+    /**
      * 重置用户密码（管理员）
      */
     @Transactional
