@@ -227,6 +227,11 @@ public class UserService {
 
         user.setLastLoginAt(LocalDateTime.now());
         user.setFailedLoginAttempts(0);
+
+        // 短信登录已验证手机号，不再要求修改密码
+        if (user.isPasswordChangeRequired()) {
+            user.setPasswordChangeRequired(false);
+        }
         userRepository.save(user);
 
         String accessToken = jwtService.generateAccessToken(user.getUsername(), user.getRole().name());
