@@ -207,25 +207,24 @@ public class UserService {
     }
 
     /**
-     * 短信验证码登录：手机号即用户名，不存在则自动注册
+     * 查询手机号是否已注册
+     */
+    public boolean existsByUsername(String username) {
+        return userRepository.existsByUsername(username);
+    }
+
+    /**
+     * 短信验证码登录：手机号即用户名，用户必须由管理员预先创建
      */
     @Transactional
-    public LoginResponse loginOrRegisterByPhone(String phone) {
-        User user = userRepository.findByUsername(phone).orElseGet(() -> {
-            log.info("手机号 {} 首次登录，自动创建用户", phone);
-            User newUser = User.builder()
-                    .username(phone)
-                    .password(passwordEncoder.encode("SMS_" + System.currentTimeMillis()))
-                    .displayName(phone)
-                    .role(Role.ROLE_USER)
-                    .enabled(true)
-                    .passwordChangeRequired(true)
-                    .build();
-            return userRepository.save(newUser);
-        });
+    public LoginResponse loginByPhone(String phone) {
+        User user = userRepository.findByUsername(phone)
+                .orElseThrow(() -> new EntityNotFoundException("该手机号未授权，请联系管理员"));
+
         if (!user.isEnabled()) {
             throw new DisabledException("账户已被禁用");
         }
+
         user.setLastLoginAt(LocalDateTime.now());
         user.setFailedLoginAttempts(0);
         userRepository.save(user);

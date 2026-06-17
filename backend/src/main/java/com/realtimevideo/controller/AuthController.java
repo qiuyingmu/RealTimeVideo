@@ -159,6 +159,9 @@ public class AuthController {
 
     /**
      * 发送短信验证码
+     *
+     * 先校验手机号在数据库中是否存在（需管理员预先授权），
+     * 不存在则拒绝发送，引导用户联系管理员。
      */
     @PostMapping("/send-sms-code")
     public ResponseEntity<ApiResponse<String>> sendSmsCode(
@@ -167,6 +170,12 @@ public class AuthController {
         if (phone == null || phone.isEmpty()) {
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error("手机号不能为空"));
+        }
+
+        // 校验手机号是否已在系统中注册（管理员预设）
+        if (!userService.existsByUsername(phone)) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("该手机号未授权，请联系管理员开通"));
         }
 
         SmsAuthService.SendResult result = smsAuthService.sendCode(phone);
@@ -180,8 +189,8 @@ public class AuthController {
     /**
      * 短信验证码登录
      *
-     * 用手机号作为用户名，验证码通过后返回 JWT Token。
-     * 如果该手机号对应的用户不存在，自动创建新用户（手机号注册）。
+     * 手机号作为用户名，验证码通过后返回 JWT Token。
+     * 手机号必须是管理员预先授权的用户。
      */
     @PostMapping("/sms-login")
     public ResponseEntity<ApiResponse<LoginResponse>> smsLogin(
@@ -196,6 +205,12 @@ public class AuthController {
                     .body(ApiResponse.error("手机号和验证码不能为空"));
         }
 
+        // 校验手机号是否存在
+        if (!userService.existsByUsername(phone)) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("该手机号未授权，请联系管理员开通"));
+        }
+
         // 核验验证码
         boolean verified = smsAuthService.checkCode(phone, code);
         if (!verified) {
@@ -204,8 +219,7 @@ public class AuthController {
         }
 
         try {
-            // 用手机号作为用户名登录/注册
-            LoginResponse response = userService.loginOrRegisterByPhone(phone);
+            LoginResponse response = userService.loginByPhone(phone);
             auditLogService.log("SMS_LOGIN", "phone:" + phone,
                     "短信验证码登录成功", httpRequest);
             addRefreshTokenCookie(httpResponse, response.getRefreshToken());
