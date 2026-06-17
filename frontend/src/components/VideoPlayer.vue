@@ -218,9 +218,24 @@ function destroyPlayerInstance() {
   }
 }
 
+// ====== 确保播放器容器元素存在 ======
+function ensurePlayerContainer() {
+  let el = document.getElementById('ezuikit-player')
+  if (!el) {
+    // EZUIKit destroy() 会移除容器，重建它
+    el = document.createElement('div')
+    el.id = 'ezuikit-player'
+    el.className = 'ezuikit-player'
+    document.querySelector('.video-player-wrapper')?.appendChild(el)
+  }
+}
+
 // ====== 创建播放器 ======
 function createPlayer() {
   if (!currentToken) { error.value = '无法获取播放凭证，请刷新页面后重试'; loading.value = false; return }
+
+  // 确保容器存在（destroy 后可能被移除）
+  ensurePlayerContainer()
 
   loadStep.value = 3
 
