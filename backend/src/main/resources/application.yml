@@ -50,6 +50,13 @@ ezviz:
   app-key: ${EZS_APP_KEY:}
   app-secret: ${EZS_APP_SECRET:}
 
+# 阿里云短信认证服务
+sms-auth:
+  access-key-id: ${SMS_ACCESS_KEY_ID:}
+  access-key-secret: ${SMS_ACCESS_KEY_SECRET:}
+  sign-name: ${SMS_SIGN_NAME:速通互联验证码}
+  template-code: ${SMS_TEMPLATE_CODE:100001}
+
 logging:
   level:
     com.realtimevideo: INFO

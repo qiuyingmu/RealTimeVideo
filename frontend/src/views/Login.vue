@@ -9,6 +9,12 @@
       </div>
 
       <form class="login-form" @submit.prevent="handleLogin" autocomplete="off">
+        <!-- 登录方式切换 -->
+        <div class="login-mode-tabs">
+          <button type="button" class="mode-tab" :class="{ active: loginMode === 'password' }" @click="loginMode = 'password'">密码登录</button>
+          <button type="button" class="mode-tab" :class="{ active: loginMode === 'sms' }" @click="loginMode = 'sms'">验证码登录</button>
+        </div>
+
         <!-- 手机号 -->
         <div class="form-group">
           <label for="username">手机号</label>
@@ -22,7 +28,7 @@
               v-model="form.username"
               type="text"
               placeholder="请输入手机号"
-              maxlength="50"
+              maxlength="11"
               :disabled="loading"
               autocomplete="username"
               @input="clearError"
@@ -30,43 +36,65 @@
           </div>
         </div>
 
-        <!-- 密码 -->
-        <div class="form-group">
-          <label for="password">密码</label>
-          <div class="input-wrapper">
-            <svg class="input-icon" viewBox="0 0 24 24" width="20" height="20">
-              <rect x="3" y="11" width="18" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
-              <path d="M7 11V7a5 5 0 0110 0v4" fill="none" stroke="currentColor" stroke-width="2"/>
-            </svg>
-            <input
-              id="password"
-              v-model="form.password"
-              :type="showPassword ? 'text' : 'password'"
-              placeholder="请输入密码"
-              maxlength="100"
-              :disabled="loading"
-              autocomplete="current-password"
-              @input="clearError"
-            />
-            <button
-              type="button"
-              class="toggle-password"
-              @click="showPassword = !showPassword"
-              :aria-label="showPassword ? '隐藏密码' : '显示密码'"
-              tabindex="-1"
-            >
-              <svg v-if="!showPassword" viewBox="0 0 24 24" width="18" height="18">
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" fill="none" stroke="currentColor" stroke-width="2"/>
-                <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
+        <!-- 密码登录模式 -->
+        <template v-if="loginMode === 'password'">
+          <div class="form-group">
+            <label for="password">密码</label>
+            <div class="input-wrapper">
+              <svg class="input-icon" viewBox="0 0 24 24" width="20" height="20">
+                <rect x="3" y="11" width="18" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
+                <path d="M7 11V7a5 5 0 0110 0v4" fill="none" stroke="currentColor" stroke-width="2"/>
               </svg>
-              <svg v-else viewBox="0 0 24 24" width="18" height="18">
-                <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94" fill="none" stroke="currentColor" stroke-width="2"/>
-                <path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.06 3.06" fill="none" stroke="currentColor" stroke-width="2"/>
-                <line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" stroke-width="2"/>
-              </svg>
-            </button>
+              <input
+                id="password"
+                v-model="form.password"
+                :type="showPassword ? 'text' : 'password'"
+                placeholder="请输入密码"
+                maxlength="100"
+                :disabled="loading"
+                autocomplete="current-password"
+                @input="clearError"
+              />
+              <button type="button" class="toggle-password" @click="showPassword = !showPassword" :aria-label="showPassword ? '隐藏密码' : '显示密码'" tabindex="-1">
+                <svg v-if="!showPassword" viewBox="0 0 24 24" width="18" height="18">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" fill="none" stroke="currentColor" stroke-width="2"/>
+                  <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
+                </svg>
+                <svg v-else viewBox="0 0 24 24" width="18" height="18">
+                  <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94" fill="none" stroke="currentColor" stroke-width="2"/>
+                  <path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.06 3.06" fill="none" stroke="currentColor" stroke-width="2"/>
+                  <line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" stroke-width="2"/>
+                </svg>
+              </button>
+            </div>
           </div>
-        </div>
+        </template>
+
+        <!-- 验证码登录模式 -->
+        <template v-if="loginMode === 'sms'">
+          <div class="form-group">
+            <label for="smsCode">验证码</label>
+            <div class="input-wrapper code-wrapper">
+              <svg class="input-icon" viewBox="0 0 24 24" width="20" height="20">
+                <rect x="3" y="11" width="18" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
+                <path d="M7 11V7a5 5 0 0110 0v4" fill="none" stroke="currentColor" stroke-width="2"/>
+              </svg>
+              <input
+                id="smsCode"
+                v-model="form.smsCode"
+                type="text"
+                placeholder="请输入验证码"
+                maxlength="4"
+                :disabled="loading"
+                autocomplete="one-time-code"
+                @input="clearError"
+              />
+              <button type="button" class="btn-get-code" :disabled="codeSending || codeCountdown > 0 || !form.username.trim()" @click="sendSmsCode">
+                {{ codeCountdown > 0 ? `${codeCountdown}s` : (codeSending ? '发送中...' : '获取验证码') }}
+              </button>
+            </div>
+          </div>
+        </template>
 
         <!-- 错误提示 -->
         <transition name="fade">
@@ -95,11 +123,11 @@
 </template>
 
 <script setup>
-import { reactive, ref, computed } from 'vue'
+import { reactive, ref, computed, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/store/auth'
+import { authApi } from '@/api'
 
-// 移动端检测
 function isMobileDevice() {
   return window.innerWidth <= 768 || 'ontouchstart' in window
 }
@@ -108,31 +136,68 @@ const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
 
+const loginMode = ref('sms') // 'password' | 'sms'
 const form = reactive({
   username: '',
-  password: ''
+  password: '',
+  smsCode: ''
 })
 
 const loading = ref(false)
 const showPassword = ref(false)
 const errorMessage = ref('')
+const codeSending = ref(false)
+const codeCountdown = ref(0)
+let codeTimer = null
 
 const isFormValid = computed(() => {
-  return form.username.trim().length >= 3 && form.password.length >= 6
+  if (loginMode.value === 'password') {
+    return form.username.trim().length >= 3 && form.password.length >= 6
+  }
+  return form.username.trim().length >= 11 && form.smsCode.length >= 4
 })
 
 function clearError() {
   errorMessage.value = ''
 }
 
+async function sendSmsCode() {
+  const phone = form.username.trim()
+  if (!phone || phone.length < 11 || codeSending.value || codeCountdown.value > 0) return
+  codeSending.value = true
+  errorMessage.value = ''
+  try {
+    await authApi.sendSmsCode(phone)
+    startCodeCountdown()
+  } catch (err) {
+    errorMessage.value = err.friendlyMessage || '验证码发送失败'
+  } finally {
+    codeSending.value = false
+  }
+}
+
+function startCodeCountdown() {
+  codeCountdown.value = 60
+  if (codeTimer) clearInterval(codeTimer)
+  codeTimer = setInterval(() => {
+    codeCountdown.value--
+    if (codeCountdown.value <= 0) {
+      clearInterval(codeTimer)
+      codeTimer = null
+    }
+  }, 1000)
+}
+
 async function handleLogin() {
   if (!isFormValid.value || loading.value) return
-
   loading.value = true
   errorMessage.value = ''
-
   try {
-    await authStore.login(form.username.trim(), form.password)
+    if (loginMode.value === 'sms') {
+      await authStore.smsLogin(form.username.trim(), form.smsCode)
+    } else {
+      await authStore.login(form.username.trim(), form.password)
+    }
     const redirect = route.query.redirect || (isMobileDevice() ? '/mobile/dashboard' : '/')
     router.push(redirect)
   } catch (error) {
@@ -141,6 +206,10 @@ async function handleLogin() {
     loading.value = false
   }
 }
+
+onUnmounted(() => {
+  if (codeTimer) clearInterval(codeTimer)
+})
 </script>
 
 <style scoped>
@@ -204,6 +273,68 @@ async function handleLogin() {
   display: flex;
   flex-direction: column;
   gap: 20px;
+}
+
+/* 登录方式切换 */
+.login-mode-tabs {
+  display: flex;
+  gap: 0;
+  background: #f1f5f9;
+  border-radius: var(--radius-sm);
+  padding: 3px;
+}
+
+.mode-tab {
+  flex: 1;
+  padding: 8px 16px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.mode-tab.active {
+  background: #fff;
+  color: var(--primary);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+/* 验证码输入行 */
+.code-wrapper {
+  display: flex;
+  gap: 8px;
+}
+
+.code-wrapper input {
+  flex: 1;
+}
+
+.btn-get-code {
+  flex-shrink: 0;
+  padding: 0 14px;
+  height: 48px;
+  font-size: 13px;
+  font-weight: 600;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.btn-get-code:hover:not(:disabled) {
+  background: var(--primary-dark);
+}
+
+.btn-get-code:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .form-group {

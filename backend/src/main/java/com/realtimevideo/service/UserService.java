@@ -207,6 +207,40 @@ public class UserService {
     }
 
     /**
+     * 短信验证码登录：手机号即用户名，不存在则自动注册
+     */
+    @Transactional
+    public LoginResponse loginOrRegisterByPhone(String phone) {
+        User user = userRepository.findByUsername(phone).orElseGet(() -> {
+            log.info("手机号 {} 首次登录，自动创建用户", phone);
+            User newUser = User.builder()
+                    .username(phone)
+                    .password(passwordEncoder.encode("SMS_" + System.currentTimeMillis()))
+                    .displayName(phone)
+                    .role(Role.ROLE_USER)
+                    .enabled(true)
+                    .passwordChangeRequired(true)
+                    .build();
+            return userRepository.save(newUser);
+        });
+        if (!user.isEnabled()) {
+            throw new DisabledException("账户已被禁用");
+        }
+        user.setLastLoginAt(LocalDateTime.now());
+        user.setFailedLoginAttempts(0);
+        userRepository.save(user);
+
+        String accessToken = jwtService.generateAccessToken(user.getUsername(), user.getRole().name());
+        String refreshToken = jwtService.generateRefreshToken(user.getUsername());
+        return LoginResponse.builder()
+                .accessToken(accessToken).refreshToken(refreshToken)
+                .tokenType("Bearer").expiresIn(jwtService.getAccessTokenExpiration())
+                .username(user.getUsername()).displayName(user.getDisplayName())
+                .role(user.getRole().name()).passwordChangeRequired(user.isPasswordChangeRequired())
+                .build();
+    }
+
+    /**
      * 管理员创建新用户
      */
     @Transactional

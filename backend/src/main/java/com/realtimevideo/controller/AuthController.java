@@ -5,6 +5,7 @@ import com.realtimevideo.dto.LoginRequest;
 import com.realtimevideo.dto.LoginResponse;
 import com.realtimevideo.service.AuditLogService;
 import com.realtimevideo.service.JwtService;
+import com.realtimevideo.service.SmsAuthService;
 import com.realtimevideo.service.UserService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -31,6 +32,7 @@ public class AuthController {
     private final UserService userService;
     private final AuditLogService auditLogService;
     private final JwtService jwtService;
+    private final SmsAuthService smsAuthService;
 
     @Value("${jwt.refresh-token-expiration:604800000}")
     private long refreshTokenExpiration;
@@ -151,6 +153,69 @@ public class AuthController {
         );
 
         return ResponseEntity.ok(ApiResponse.success(userInfo));
+    }
+
+    // ======================== 短信验证码认证 ========================
+
+    /**
+     * 发送短信验证码
+     */
+    @PostMapping("/send-sms-code")
+    public ResponseEntity<ApiResponse<String>> sendSmsCode(
+            @RequestBody Map<String, String> body) {
+        String phone = body.get("phoneNumber");
+        if (phone == null || phone.isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("手机号不能为空"));
+        }
+
+        SmsAuthService.SendResult result = smsAuthService.sendCode(phone);
+        if (result.success()) {
+            return ResponseEntity.ok(ApiResponse.success("验证码已发送"));
+        }
+        return ResponseEntity.badRequest()
+                .body(ApiResponse.error(result.message() != null ? result.message() : "发送失败"));
+    }
+
+    /**
+     * 短信验证码登录
+     *
+     * 用手机号作为用户名，验证码通过后返回 JWT Token。
+     * 如果该手机号对应的用户不存在，自动创建新用户（手机号注册）。
+     */
+    @PostMapping("/sms-login")
+    public ResponseEntity<ApiResponse<LoginResponse>> smsLogin(
+            @RequestBody Map<String, String> body,
+            HttpServletRequest httpRequest,
+            HttpServletResponse httpResponse) {
+        String phone = body.get("phoneNumber");
+        String code = body.get("verifyCode");
+
+        if (phone == null || code == null) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("手机号和验证码不能为空"));
+        }
+
+        // 核验验证码
+        boolean verified = smsAuthService.checkCode(phone, code);
+        if (!verified) {
+            return ResponseEntity.status(401)
+                    .body(ApiResponse.error("验证码错误或已过期"));
+        }
+
+        try {
+            // 用手机号作为用户名登录/注册
+            LoginResponse response = userService.loginOrRegisterByPhone(phone);
+            auditLogService.log("SMS_LOGIN", "phone:" + phone,
+                    "短信验证码登录成功", httpRequest);
+            addRefreshTokenCookie(httpResponse, response.getRefreshToken());
+            return ResponseEntity.ok(ApiResponse.success("登录成功", response));
+        } catch (Exception e) {
+            auditLogService.log("SMS_LOGIN_FAILED", "phone:" + phone,
+                    "短信登录失败: " + e.getMessage(), httpRequest);
+            return ResponseEntity.status(500)
+                    .body(ApiResponse.error("登录失败，请重试"));
+        }
     }
 
     // ========== Cookie 工具方法 ==========

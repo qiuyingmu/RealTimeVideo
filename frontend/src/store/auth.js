@@ -41,6 +41,15 @@ export const useAuthStore = defineStore('auth', () => {
     return data
   }
 
+  async function smsLogin(phoneNumber, verifyCode) {
+    const response = await authApi.smsLogin(phoneNumber, verifyCode)
+    const data = response.data.data
+    setTokens(data.accessToken)
+    setUserInfo(data.username, data.displayName, data.role)
+    passwordChangeRequired.value = data.passwordChangeRequired || false
+    return data
+  }
+
   async function logout() {
     // 通知后端登出（浏览器自动携带 refreshToken cookie）
     try {

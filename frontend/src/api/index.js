@@ -158,7 +158,11 @@ export const authApi = {
     api.post('/auth/change-password', data),
 
   me: () =>
-    api.get('/auth/me')
+    api.get('/auth/me'),
+  sendSmsCode: (phoneNumber) =>
+    api.post('/auth/send-sms-code', { phoneNumber }),
+  smsLogin: (phoneNumber, verifyCode) =>
+    api.post('/auth/sms-login', { phoneNumber, verifyCode })
 }
 
 // 萤石云
