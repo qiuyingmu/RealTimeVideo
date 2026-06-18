@@ -225,14 +225,15 @@ async function handleLogin() {
   try {
     if (loginMode.value === 'sms') {
       await authStore.smsLogin(form.username.trim(), form.smsCode)
-      // 管理员短信登录后直接跳转PC端，不弹设置密码
-      if (authStore.isAdmin) {
-        router.push(route.query.redirect || '/')
+      // 普通用户短信登录后问是否设置密码，管理员不需要
+      if (!authStore.isAdmin) {
+        pendingRedirect = route.query.redirect || (isMobileDevice() ? '/mobile/dashboard' : '/')
+        showSetPwdDialog.value = true
         return
       }
-      // 普通用户短信登录后问是否设置密码
-      pendingRedirect = route.query.redirect || '/mobile/dashboard'
-      showSetPwdDialog.value = true
+      // 管理员短信登录后直接跳转（按设备）
+      const redirect = route.query.redirect || (isMobileDevice() ? '/mobile/dashboard' : '/')
+      router.push(redirect)
     } else {
       await authStore.login(form.username.trim(), form.password)
       const redirect = route.query.redirect || (isMobileDevice() ? '/mobile/dashboard' : '/')
