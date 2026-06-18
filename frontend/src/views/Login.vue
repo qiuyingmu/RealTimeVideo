@@ -28,6 +28,7 @@
               @input="clearError"
             />
           </div>
+          <small v-if="loginMode === 'sms'" class="field-hint">请输入管理员授权的手机号</small>
         </div>
 
         <!-- 密码登录模式（管理员入口） -->
