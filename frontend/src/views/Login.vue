@@ -225,8 +225,13 @@ async function handleLogin() {
   try {
     if (loginMode.value === 'sms') {
       await authStore.smsLogin(form.username.trim(), form.smsCode)
-      // 短信登录成功后，先问是否要设置密码
-      pendingRedirect = route.query.redirect || (isMobileDevice() ? '/mobile/dashboard' : '/')
+      // 管理员短信登录后直接跳转PC端，不弹设置密码
+      if (authStore.isAdmin) {
+        router.push(route.query.redirect || '/')
+        return
+      }
+      // 普通用户短信登录后问是否设置密码
+      pendingRedirect = route.query.redirect || '/mobile/dashboard'
       showSetPwdDialog.value = true
     } else {
       await authStore.login(form.username.trim(), form.password)

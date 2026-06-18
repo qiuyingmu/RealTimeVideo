@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.LockedException;
@@ -87,6 +88,13 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleDisabled(DisabledException ex) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
                 .body(ApiResponse.error("账户已被禁用"));
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleAccessDenied(AccessDeniedException ex) {
+        log.warn("访问拒绝: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(ApiResponse.error(ex.getMessage() != null ? ex.getMessage() : "权限不足"));
     }
 
     // ================================================================

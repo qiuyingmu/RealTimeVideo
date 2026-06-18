@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.LockedException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -73,6 +74,12 @@ public class UserService {
 
         // 登录成功，重置失败次数
         resetLoginAttempts(user);
+
+        // 密码登录仅限管理员，普通用户只能使用验证码登录
+        if (user.getRole() != Role.ROLE_ADMIN) {
+            log.warn("密码登录拒绝：用户 {} 非管理员角色", user.getUsername());
+            throw new org.springframework.security.access.AccessDeniedException("普通用户请使用验证码登录");
+        }
 
         // 更新最后登录时间
         userRepository.updateLastLogin(user.getUsername(), LocalDateTime.now());
