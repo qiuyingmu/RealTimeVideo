@@ -28,7 +28,7 @@
               @input="clearError"
             />
           </div>
-          <small v-if="loginMode === 'sms'" class="field-hint">请输入管理员授权的手机号</small>
+          <small v-if="phoneError" class="field-hint error">请输入正确的11位手机号</small>
         </div>
 
         <!-- 密码登录模式（管理员入口） -->
@@ -156,7 +156,19 @@ const isFormValid = computed(() => {
   if (loginMode.value === 'password') {
     return form.username.trim().length >= 3 && form.password.length >= 6
   }
-  return form.username.trim().length >= 11 && form.smsCode.length >= 4
+  return isPhoneValid.value && form.smsCode.length >= 4
+})
+
+// 手机号格式校验：11 位数字，1 开头，第二位 3-9
+const isPhoneValid = computed(() => {
+  return /^1[3-9]\d{9}$/.test(form.username.trim())
+})
+
+const phoneError = computed(() => {
+  const phone = form.username.trim()
+  if (!phone || loginMode.value === 'password') return false
+  // 输入超过 3 位还未匹配格式才开始提示
+  return phone.length >= 3 && !isPhoneValid.value
 })
 
 function clearError() {
@@ -165,7 +177,7 @@ function clearError() {
 
 async function sendSmsCode() {
   const phone = form.username.trim()
-  if (!phone || phone.length < 11 || codeSending.value || codeCountdown.value > 0) return
+  if (!phone || !isPhoneValid.value || codeSending.value || codeCountdown.value > 0) return
   codeSending.value = true
   errorMessage.value = ''
   try {
