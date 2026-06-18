@@ -60,8 +60,8 @@
       </div>
     </div>
 
-    <!-- 账户安全 -->
-    <div class="settings-section">
+    <!-- 账户安全（仅管理员可见） -->
+    <div v-if="authStore.isAdmin" class="settings-section">
       <div class="section-header">账户安全</div>
       <router-link to="/mobile/settings/change-password" class="settings-item link-item">
         <div class="settings-item-left">

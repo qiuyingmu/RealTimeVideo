@@ -119,28 +119,6 @@
         </div>
       </form>
 
-      <!-- 短信登录后设置密码弹窗 -->
-      <transition name="fade">
-        <div v-if="showSetPwdDialog" class="setpwd-overlay">
-          <div class="setpwd-dialog">
-            <div class="setpwd-icon">
-              <svg viewBox="0 0 64 64" width="48" height="48">
-                <rect x="8" y="30" width="48" height="22" rx="4" fill="none" stroke="var(--primary)" stroke-width="2.5"/>
-                <path d="M18 30V18a14 14 0 0 1 28 0v12" fill="none" stroke="var(--primary)" stroke-width="2.5" stroke-linecap="round"/>
-                <circle cx="32" cy="42" r="3" fill="#f59e0b"/>
-                <line x1="32" y1="37" x2="32" y2="44" stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round"/>
-              </svg>
-            </div>
-            <h3 class="setpwd-title">设置密码</h3>
-            <p class="setpwd-desc">设置密码后，您也可以使用「手机号+密码」快捷登录</p>
-            <div class="setpwd-actions">
-              <button class="btn-setpwd-primary" @click="goSetPassword">设置密码</button>
-              <button class="btn-setpwd-skip" @click="skipSetPassword">暂不设置</button>
-            </div>
-          </div>
-        </div>
-      </transition>
-
       <div class="login-footer">
         <p>© 2026 贵州建工监理咨询有限公司</p>
       </div>
@@ -175,10 +153,6 @@ const errorMessage = ref('')
 const codeSending = ref(false)
 const codeCountdown = ref(0)
 let codeTimer = null
-
-// 短信登录后设置密码弹窗
-const showSetPwdDialog = ref(false)
-let pendingRedirect = ''
 
 const isFormValid = computed(() => {
   if (loginMode.value === 'password') {
@@ -225,13 +199,7 @@ async function handleLogin() {
   try {
     if (loginMode.value === 'sms') {
       await authStore.smsLogin(form.username.trim(), form.smsCode)
-      // 普通用户短信登录后问是否设置密码，管理员不需要
-      if (!authStore.isAdmin) {
-        pendingRedirect = route.query.redirect || (isMobileDevice() ? '/mobile/dashboard' : '/')
-        showSetPwdDialog.value = true
-        return
-      }
-      // 管理员短信登录后直接跳转（按设备）
+      // 短信登录后按设备跳转（普通用户和管理员都适用）
       const redirect = route.query.redirect || (isMobileDevice() ? '/mobile/dashboard' : '/')
       router.push(redirect)
     } else {
@@ -244,16 +212,6 @@ async function handleLogin() {
   } finally {
     loading.value = false
   }
-}
-
-function goSetPassword() {
-  showSetPwdDialog.value = false
-  router.push({ path: '/change-password', query: { mode: 'setup', redirect: pendingRedirect } })
-}
-
-function skipSetPassword() {
-  showSetPwdDialog.value = false
-  router.push(pendingRedirect)
 }
 
 onUnmounted(() => {
@@ -626,114 +584,6 @@ onUnmounted(() => {
   }
 
   /* 设置密码弹窗移动端适配 */
-  .setpwd-overlay {
-    padding: 16px;
-  }
-  .setpwd-dialog {
-    padding: 28px 24px;
-  }
-}
-
-/* ====== 设置密码弹窗 ====== */
-.setpwd-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.45);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
-  padding: 20px;
-  animation: fadeIn 0.2s ease;
-}
-
-.setpwd-dialog {
-  background: #fff;
-  border-radius: 16px;
-  padding: 32px 28px;
-  max-width: 380px;
-  width: 100%;
-  text-align: center;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
-  animation: slideUp 0.3s ease;
-}
-
-.setpwd-icon {
-  margin-bottom: 16px;
-}
-
-.setpwd-title {
-  font-size: 20px;
-  font-weight: 700;
-  color: #1a1a2e;
-  margin-bottom: 8px;
-}
-
-.setpwd-desc {
-  font-size: 14px;
-  color: #64748b;
-  line-height: 1.5;
-  margin-bottom: 24px;
-}
-
-.setpwd-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.btn-setpwd-primary {
-  width: 100%;
-  padding: 12px;
-  font-size: 15px;
-  font-weight: 600;
-  background: var(--primary);
-  color: #fff;
-  border: none;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-setpwd-primary:hover {
-  background: var(--primary-dark);
-  transform: translateY(-1px);
-}
-
-.btn-setpwd-skip {
-  width: 100%;
-  padding: 12px;
-  font-size: 14px;
-  font-weight: 500;
-  background: transparent;
-  color: #64748b;
-  border: none;
-  cursor: pointer;
-  transition: color 0.2s;
-}
-
-.btn-setpwd-skip:hover {
-  color: #1a1a2e;
-}
-
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-html.dark .setpwd-dialog {
-  background: #1e293b;
-}
-html.dark .setpwd-title {
-  color: #e2e8f0;
-}
-html.dark .setpwd-desc {
-  color: #94a3b8;
-}
-html.dark .btn-setpwd-skip {
-  color: #94a3b8;
-}
-html.dark .btn-setpwd-skip:hover {
-  color: #e2e8f0;
+  
 }
 </style>
