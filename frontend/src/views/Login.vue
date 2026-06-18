@@ -9,13 +9,7 @@
       </div>
 
       <form class="login-form" @submit.prevent="handleLogin" autocomplete="off">
-        <!-- 登录方式切换 -->
-        <div class="login-mode-tabs">
-          <button type="button" class="mode-tab" :class="{ active: loginMode === 'password' }" @click="loginMode = 'password'">密码登录</button>
-          <button type="button" class="mode-tab" :class="{ active: loginMode === 'sms' }" @click="loginMode = 'sms'">验证码登录</button>
-        </div>
-
-        <!-- 手机号 -->
+        <!-- 手机号（两种模式共用） -->
         <div class="form-group">
           <label for="username">手机号</label>
           <div class="input-wrapper">
@@ -36,7 +30,7 @@
           </div>
         </div>
 
-        <!-- 密码登录模式 -->
+        <!-- 密码登录模式（管理员入口） -->
         <template v-if="loginMode === 'password'">
           <div class="form-group">
             <label for="password">密码</label>
@@ -70,7 +64,7 @@
           </div>
         </template>
 
-        <!-- 验证码登录模式 -->
+        <!-- 验证码登录模式（用户默认） -->
         <template v-if="loginMode === 'sms'">
           <div class="form-group">
             <label for="smsCode">验证码</label>
@@ -110,9 +104,19 @@
 
         <!-- 登录按钮 -->
         <button type="submit" class="btn-login" :disabled="loading || !isFormValid">
-          <span v-if="!loading">登 录</span>
+          <span v-if="!loading">{{ loginMode === 'password' ? '管理员登录' : '登 录' }}</span>
           <span v-else class="loading-spinner"></span>
         </button>
+
+        <!-- 管理员切换入口 -->
+        <div class="admin-entry">
+          <template v-if="loginMode === 'sms'">
+            <button type="button" class="admin-entry-btn" @click="loginMode = 'password'">管理员登录</button>
+          </template>
+          <template v-else>
+            <button type="button" class="admin-entry-btn back" @click="loginMode = 'sms'">← 返回</button>
+          </template>
+        </div>
       </form>
 
       <!-- 短信登录后设置密码弹窗 -->
@@ -314,32 +318,33 @@ onUnmounted(() => {
   gap: 20px;
 }
 
-/* 登录方式切换 */
-.login-mode-tabs {
-  display: flex;
-  gap: 0;
-  background: #f1f5f9;
-  border-radius: var(--radius-sm);
-  padding: 3px;
+/* 管理员入口链接 */
+.admin-entry {
+  text-align: center;
+  margin-top: -8px;
 }
 
-.mode-tab {
-  flex: 1;
-  padding: 8px 16px;
+.admin-entry-btn {
+  background: none;
   border: none;
-  background: transparent;
-  border-radius: 6px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-secondary);
+  font-size: 12px;
+  color: var(--primary);
   cursor: pointer;
-  transition: all 0.2s;
+  opacity: 0.5;
+  transition: opacity 0.2s;
+  padding: 4px 8px;
 }
 
-.mode-tab.active {
-  background: #fff;
-  color: var(--primary);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+.admin-entry-btn:hover {
+  opacity: 0.9;
+}
+
+.admin-entry-btn.back {
+  opacity: 0.4;
+  color: var(--text-secondary);
+}
+.admin-entry-btn.back:hover {
+  opacity: 0.7;
 }
 
 /* 验证码输入行 */
