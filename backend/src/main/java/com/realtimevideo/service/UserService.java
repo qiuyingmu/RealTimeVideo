@@ -298,9 +298,15 @@ public class UserService {
             throw new IllegalArgumentException("用户名已存在");
         }
 
+        // 验证密码长度（6~18 位）
+        String password = request.getPassword();
+        if (password == null || password.length() < PASSWORD_MIN_LENGTH || password.length() > PASSWORD_MAX_LENGTH) {
+            throw new IllegalArgumentException("密码长度必须为 " + PASSWORD_MIN_LENGTH + "~" + PASSWORD_MAX_LENGTH + " 位");
+        }
+
         User user = User.builder()
                 .username(request.getUsername())
-                .password(passwordEncoder.encode(request.getPassword()))
+                .password(passwordEncoder.encode(password))
                 .displayName(request.getDisplayName())
                 .role(Role.valueOf(request.getRole()))
                 .enabled(true)
