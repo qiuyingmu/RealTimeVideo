@@ -134,7 +134,7 @@
             <div class="form-group">
               <label>密码 <span class="required">*</span></label>
               <div class="password-wrapper">
-                <input v-model="createForm.password" :type="showPwd ? 'text' : 'password'" placeholder="至少8位，需包含字母和数字" required maxlength="100"/>
+                <input v-model="createForm.password" :type="showPwd ? 'text' : 'password'" placeholder="6~18位" required maxlength="18"/>
                 <button type="button" class="toggle-pwd" @click="showPwd = !showPwd" tabindex="-1">
                   <svg v-if="showPwd" viewBox="0 0 24 24" width="18" height="18">
                     <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94" fill="none" stroke="currentColor" stroke-width="2"/>
@@ -147,7 +147,7 @@
                   </svg>
                 </button>
               </div>
-              <small>至少8位，需包含字母和数字</small>
+              <small>6~18位</small>
             </div>
             <div class="form-group">
               <label>显示名称</label>
@@ -188,8 +188,8 @@
           <form class="user-form" @submit.prevent="handleResetPassword">
             <div class="form-group">
               <label>新密码 <span class="required">*</span></label>
-              <input v-model="newPassword" type="password" placeholder="至少8位，需包含字母和数字" required minlength="8" maxlength="100"/>
-              <small>至少8位，需包含字母和数字</small>
+              <input v-model="newPassword" type="password" placeholder="6~18位" required minlength="6" maxlength="18"/>
+              <small>6~18位</small>
             </div>
             <div class="form-actions">
               <button type="button" class="btn-cancel" @click="resetPwdUser = null">取消</button>

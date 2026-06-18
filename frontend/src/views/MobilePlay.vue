@@ -133,7 +133,6 @@ const isFullscreen = ref(false)
 const showMobileControls = ref(false)
 // isMobile 初始检测，配合 resize 事件保持同步
 const isMobile = ref(window.innerWidth <= 768 || 'ontouchstart' in window)
-const ptzPanelOpen = ref(false)
 
 // 缩放模式：0=拉伸填充, 1=等比缩放(含黑边), 2=裁剪填充
 // 默认 0（拉伸填充）—— 移动端不用 cover(2)，避免放大裁剪导致像素级模糊
@@ -236,9 +235,7 @@ function createPlayer() {
 
   loadStep.value = 3
 
-  // 统一使用 pcLive 模板（右侧控制面板），兼容桌面和移动端横屏。
-  // mobileLive 模板在移动端竖屏模式下画面过小，清晰度严重受损。
-  // pcLive 提供全屏视频 + 右侧悬浮控件，移动端配合横屏锁定效果最佳。
+  // 移动端使用 mobileLive 模板，自带完整的移动端控制栏
   const playerTemplate = 'mobileLive'
   // 官方推荐：宽撑满，高按 16:9 比例
   var width = document.documentElement.clientWidth;
@@ -263,10 +260,10 @@ function createPlayer() {
     //   { value: 'fluent', name: '流畅' }
     // ],
     mobileExtendOptions: {
-      controls: ['fullScreen', 'hdSwitch'],   // 移除原生 ptzControl，使用自建底部 PTZ 面板
+      controls: ['fullScreen', 'hdSwitch', 'ptzControl'],   // 使用 EZUIKit 自带 PTZ 控制
       showClose: false,
       showBack: false,
-      showPTZ: false,
+      showPTZ: true,
     },
     handleSuccess: () => {
       // 第一次 handleSuccess：不展示模糊视频，直接触发重建
@@ -382,25 +379,6 @@ function toggleControls() {
   }
 }
 
-// ====== PTZ 云台控制 ======
-function togglePtzPanel() {
-  ptzPanelOpen.value = !ptzPanelOpen.value
-}
-
-function startPtz(direction) {
-  if (playerInstance && typeof playerInstance.startPTZ === 'function') {
-    try { playerInstance.startPTZ({ direction, speed: 1 }) }
-    catch (e) { console.warn('PTZ start failed:', e) }
-  }
-}
-
-function stopPtz() {
-  if (playerInstance && typeof playerInstance.stopPTZ === 'function') {
-    try { playerInstance.stopPTZ() }
-    catch (e) { console.warn('PTZ stop failed:', e) }
-  }
-}
-
 // ====== 缩放模式循环切换（0→1→2→0） ======
 function cycleScaleMode() {
   scaleMode.value = (scaleMode.value + 1) % 3  // 0→1→2→0
@@ -473,10 +451,8 @@ watch(activeChannel, (newChannel, oldChannel) => {
   latestChannelId = newId
   qualityUpgraded = false  // 新通道需要重新升画质
 
-  // 优雅切换：先标记切换状态（显示过渡覆盖层），再重建播放器
+  // 标记切换状态（显示过渡覆盖层），再重建播放器
   isSwitchingChannel.value = true
-  // 关闭 PTZ 面板（切换通道时自动收起）
-  ptzPanelOpen.value = false
 
   // 使用世代计数器防止竞态：如果多次快速切换，只有最新的一次生效
   const myGen = ++channelSwitchGen
@@ -687,152 +663,6 @@ onUnmounted(() => {
 .ch-nav-left { left: 6px; }
 .ch-nav-right { right: 6px; }
 
-/* ====== 自定义 PTZ 触发按钮 ====== */
-.mobile-ptz-trigger {
-  position: absolute;
-  bottom: 80px;
-  right: 12px;
-  z-index: 40;
-  width: 48px;
-  height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1.5px solid rgba(255, 255, 255, 0.15);
-  border-radius: 50%;
-  color: #fff;
-  cursor: pointer;
-  pointer-events: auto;
-  transition: all 0.2s;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
-}
-
-.mobile-ptz-trigger:active {
-  background: rgba(59, 130, 246, 0.5);
-  border-color: rgba(59, 130, 246, 0.5);
-  transform: scale(0.92);
-}
-
-/* ====== 自定义底部 PTZ 控制面板 ====== */
-.custom-ptz-panel {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 50;
-  background: rgba(15, 15, 26, 0.92);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 16px 16px 0 0;
-  padding: 16px 20px calc(16px + env(safe-area-inset-bottom, 0));
-  pointer-events: auto;
-  touch-action: none;
-}
-
-.ptz-panel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16px;
-}
-
-.ptz-panel-title {
-  font-size: 15px;
-  font-weight: 700;
-  color: #fff;
-  letter-spacing: 0.3px;
-}
-
-.ptz-close-btn {
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.1);
-  border: none;
-  border-radius: 50%;
-  color: rgba(255, 255, 255, 0.7);
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.ptz-close-btn:active {
-  background: rgba(255, 255, 255, 0.2);
-  color: #fff;
-}
-
-.ptz-panel-body {
-  display: flex;
-  justify-content: center;
-}
-
-.ptz-dpad {
-  display: grid;
-  grid-template-columns: 56px 56px 56px;
-  grid-template-rows: 56px 56px 56px;
-  gap: 4px;
-  justify-items: center;
-  align-items: center;
-}
-
-.ptz-dir-btn {
-  width: 56px;
-  height: 56px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 12px;
-  color: rgba(255, 255, 255, 0.85);
-  cursor: pointer;
-  transition: all 0.15s;
-  -webkit-tap-highlight-color: transparent;
-  user-select: none;
-  touch-action: none;
-}
-
-.ptz-dir-btn:active {
-  background: rgba(59, 130, 246, 0.4);
-  border-color: rgba(59, 130, 246, 0.5);
-  transform: scale(0.92);
-}
-
-.ptz-up { grid-column: 2; grid-row: 1; }
-.ptz-left { grid-column: 1; grid-row: 2; }
-.ptz-center {
-  grid-column: 2;
-  grid-row: 2;
-  width: 56px;
-  height: 56px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 12px;
-}
-.ptz-right { grid-column: 3; grid-row: 2; }
-.ptz-down { grid-column: 2; grid-row: 3; }
-
-/* PTZ 面板滑入/滑出动画 */
-.ptz-slide-enter-active,
-.ptz-slide-leave-active {
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
-}
-.ptz-slide-enter-from {
-  transform: translateY(100%);
-  opacity: 0;
-}
-.ptz-slide-leave-to {
-  transform: translateY(100%);
-  opacity: 0;
-}
-
 /* ====== 移动端适配 ====== */
 @media (max-width: 768px) {
   .video-player-wrapper {
@@ -904,7 +734,6 @@ onUnmounted(() => {
   }
 
   /* 6. PTZ 弹出面板 — 调整层级避免被遮挡 */
-  .ezuikit-player :deep(.ezui-ptz-panel),
   .ezuikit-player :deep(.ezui-popover) {
     z-index: 60 !important;
   }

@@ -229,8 +229,9 @@ onMounted(async () => {
     loading.value = false
   }
 
-  // 每30秒刷新状态（智能合并，保留对象引用避免卡片闪烁）
-  refreshInterval = setInterval(async () => {
+  // 每30秒刷新状态（智能合并，保留对象引用避免卡片闪烁）— 仅当设置中开启自动刷新
+  if (localStorage.getItem('mobileAutoRefresh') !== 'false') {
+    refreshInterval = setInterval(async () => {
     try {
       const res = await ezvizApi.getAllChannels()
       const newChannels = res.data.data || []
@@ -279,6 +280,7 @@ onMounted(async () => {
       }
     } catch (e) {}
   }, 30000)
+  }
 })
 
 onUnmounted(() => {
