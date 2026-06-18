@@ -1,7 +1,7 @@
 <template>
   <div class="login-page">
     <div class="login-container">
-      <div class="login-header">
+      <div class="login-header" @click="handleHeaderClick">
         <img src="/logo.svg" class="login-logo" alt="logo" />
         <h1 class="login-title">贵州建工监理咨询有限公司</h1>
         <p class="login-subtitle project-name">数字化管理平台 项目监控系统</p>
@@ -108,14 +108,9 @@
           <span v-else class="loading-spinner"></span>
         </button>
 
-        <!-- 管理员切换入口 -->
-        <div class="admin-entry">
-          <template v-if="loginMode === 'sms'">
-            <button type="button" class="admin-entry-btn" @click="loginMode = 'password'">管理员登录</button>
-          </template>
-          <template v-else>
-            <button type="button" class="admin-entry-btn back" @click="loginMode = 'sms'">← 返回</button>
-          </template>
+        <!-- 管理员密码模式下的返回链接 -->
+        <div v-if="loginMode === 'password'" class="admin-entry">
+          <button type="button" class="admin-entry-btn back" @click="loginMode = 'sms'">← 返回</button>
         </div>
       </form>
 
@@ -141,6 +136,8 @@ const route = useRoute()
 const authStore = useAuthStore()
 
 const loginMode = ref('sms') // 'password' | 'sms'
+let headerClickCount = 0
+let headerClickTimer = null
 const form = reactive({
   username: '',
   password: '',
@@ -190,6 +187,17 @@ function startCodeCountdown() {
       codeTimer = null
     }
   }, 1000)
+}
+
+// 连续点击 logo 区域 3 次进入管理员密码登录
+function handleHeaderClick() {
+  headerClickCount++
+  if (headerClickTimer) clearTimeout(headerClickTimer)
+  headerClickTimer = setTimeout(() => { headerClickCount = 0 }, 800)
+  if (headerClickCount >= 3) {
+    headerClickCount = 0
+    loginMode.value = 'password'
+  }
 }
 
 async function handleLogin() {
@@ -282,33 +290,24 @@ onUnmounted(() => {
   gap: 20px;
 }
 
-/* 管理员入口链接 */
+/* 管理员返回链接 */
 .admin-entry {
   text-align: center;
-  margin-top: -8px;
-}
-
-.admin-entry-btn {
-  background: none;
-  border: none;
-  font-size: 12px;
-  color: var(--primary);
-  cursor: pointer;
-  opacity: 0.5;
-  transition: opacity 0.2s;
-  padding: 4px 8px;
-}
-
-.admin-entry-btn:hover {
-  opacity: 0.9;
+  margin-top: -4px;
 }
 
 .admin-entry-btn.back {
-  opacity: 0.4;
+  background: none;
+  border: none;
+  font-size: 11px;
   color: var(--text-secondary);
+  cursor: pointer;
+  opacity: 0.35;
+  transition: opacity 0.2s;
+  padding: 2px 6px;
 }
 .admin-entry-btn.back:hover {
-  opacity: 0.7;
+  opacity: 0.6;
 }
 
 /* 验证码输入行 */
