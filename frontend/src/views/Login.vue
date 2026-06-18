@@ -363,6 +363,14 @@ onUnmounted(() => {
   gap: 6px;
 }
 
+.field-hint {
+  font-size: 12px;
+  margin-top: 2px;
+}
+.field-hint.error {
+  color: var(--danger);
+}
+
 .form-group label {
   font-size: 14px;
   font-weight: 500;
